@@ -10,7 +10,7 @@ const BLIPBOX_CONFIG = {
   github: {
     owner: 'Ryth1m',   // e.g. 'Ryth1m'
     repo:  'blipbox',
-    token: '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', // regenerate at github.com → Settings → Developer Settings
+    token: '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', // regenerate at github.com → Settings → Developer Settings
                                          // permissions needed: Issues → Read & Write
   },
 
