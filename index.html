@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>blipbox 📬</title>
+
+<!-- UI & theme → edit css/theme.css -->
+<link rel="stylesheet" href="css/theme.css" />
+
+<!-- your info + links → edit config/socials.js -->
+<script src="config/socials.js"></script>
+</head>
+
+<!-- ============================================================
+  blipbox — index.html
+  this file is mostly structure. to change things go to:
+
+  ┌─────────────────────────────────────────────────────────┐
+  │  config/socials.js  → your name, links, chips, text     │
+  │  css/theme.css      → colors, fonts, spacing, effects   │
+  │  js/canvas.js       → drawing engine                    │
+  │  js/submit.js       → github issues posting             │
+  └─────────────────────────────────────────────────────────┘
+============================================================ -->
+<body>
+
+<!-- background blobs (styled in theme.css → BACKGROUND BLOBS) -->
+<div class="deco-blob a"></div>
+<div class="deco-blob b"></div>
+<div class="deco-blob c"></div>
+
+<div class="page">
+
+  <!-- badge -->
+  <div class="badge fade-in">
+    <span class="dot-live"></span>
+    blipbox
+  </div>
+
+  <!-- headline (text from config/socials.js → text.headline_*) -->
+  <h1 class="headline fade-in delay-1" id="headline"></h1>
+
+  <!-- subtitle (text from config/socials.js → text.subtitle) -->
+  <p class="sub fade-in delay-2" id="subtitle"></p>
+
+  <!-- chips (built from config/socials.js → chips[]) -->
+  <div class="chips fade-in delay-2" id="chips"></div>
+
+  <!-- ko-fi (link from config/socials.js → links.kofi) -->
+  <a class="kofi-btn fade-in delay-3" id="kofiBtn" href="#" target="_blank" rel="noopener"></a>
+
+  <!-- section header -->
+  <div class="section-label fade-in delay-3">
+    <span class="num">01</span>
+    send a blip
+  </div>
+
+  <!-- main form card -->
+  <div class="card fade-in delay-4">
+
+    <!-- message textarea -->
+    <label class="field-label" for="msg">your message</label>
+    <textarea id="msg"></textarea>
+
+    <!-- drawing section -->
+    <div style="margin-top: 24px;">
+      <label class="field-label">
+        draw something
+        <span style="color:var(--accent3); font-size:10px;">// optional</span>
+      </label>
+
+      <div class="canvas-tools">
+        <button class="tool-btn active" id="toolPen"    onclick="setTool('pen')">✏ pen</button>
+        <button class="tool-btn"        id="toolEraser" onclick="setTool('eraser')">◻ eraser</button>
+        <input  type="range" class="size-slider" id="brushSize" min="1" max="28" value="4" title="brush size" />
+        <input  type="color" id="colorPicker" value="#2d2013" title="pick a color" />
+        <button class="tool-btn" onclick="clearCanvas()">× clear</button>
+      </div>
+
+      <canvas class="drawing-canvas" id="drawCanvas"></canvas>
+      <p class="canvas-hint">// mouse or finger — go wild</p>
+    </div>
+
+    <!-- submit -->
+    <div class="submit-row">
+      <p class="anon-note">
+        you're <strong>anonymous</strong> by default.<br/>
+        only i'll see this — promise. 🤝
+      </p>
+      <button class="submit-btn" id="submitBtn" onclick="submitBlip()">
+        send blip 📬
+      </button>
+    </div>
+
+    <div class="status" id="status"></div>
+
+  </div>
+
+  <!-- footer -->
+  <div class="footer fade-in delay-5">
+    <p>blipbox — messages go straight to me, nowhere else ✌</p>
+  </div>
+
+</div>
+
+<!-- canvas + submit engines (type=module so they can share exports) -->
+<script type="module" src="js/canvas.js"></script>
+<script type="module" src="js/submit.js"></script>
+
+<!-- build page from config/socials.js -->
+<script>
+  // runs after socials.js has loaded BLIPBOX_CONFIG
+  (function buildPage() {
+    const c = BLIPBOX_CONFIG;
+    const t = c.text;
+
+    // headline
+    document.getElementById('headline').innerHTML =
+      `${t.headline_line1.split(' ')[0]} <span class="pop">${t.headline_line1.split(' ').slice(1).join(' ')}</span><br/>
+       <span class="pop2">${t.headline_line2}</span>`;
+
+    // subtitle
+    document.getElementById('subtitle').textContent = t.subtitle;
+
+    // textarea placeholder
+    document.getElementById('msg').placeholder = t.placeholder;
+
+    // chips
+    const chipsEl = document.getElementById('chips');
+    c.chips.forEach(chip => {
+      const el = chip.link
+        ? document.createElement('a')
+        : document.createElement('span');
+      el.className = 'chip';
+      if (chip.link) { el.href = chip.link; el.target = '_blank'; el.rel = 'noopener'; }
+      el.innerHTML = `<span class="icon">${chip.icon}</span> ${chip.label}`;
+      chipsEl.appendChild(el);
+    });
+
+    // ko-fi
+    const kofiBtn = document.getElementById('kofiBtn');
+    kofiBtn.href        = c.links.kofi;
+    kofiBtn.textContent = t.kofi_label;
+  })();
+</script>
+
+</body>
+</html>
