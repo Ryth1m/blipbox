@@ -408,9 +408,14 @@ wrap.addEventListener('wheel',e=>{
   if(e.ctrlKey||e.metaKey){ e.preventDefault(); adjustZoom(e.deltaY<0?0.1:-0.1); }
 },{passive:false});
 
-// ── HISTORY (declared early so initStudio can call saveHistory) ──
+// ── ALL VARS DECLARED BEFORE initStudio() ────────────────────
 const MAX_HIST = 40;
 let drawHistory=[], drawHistIdx=-1;
+const PALETTE = ['#2d2013','#ff6b35','#ffb830','#4ecdc4','#ff6b6b','#a8e6cf',
+  '#ffd93d','#6bcb77','#4d96ff','#c77dff','#ffffff','#f8f0e3'];
+let recentColors = [];
+let currentTool='pen', isDrawing=false, lastX=0, lastY=0;
+let shapeStart=null;
 
 // ── INIT ──────────────────────────────────────────────────────
 function initStudio() {
@@ -424,9 +429,6 @@ function initStudio() {
 initStudio();
 
 // ── COLOR SWATCHES ────────────────────────────────────────────
-const PALETTE = ['#2d2013','#ff6b35','#ffb830','#4ecdc4','#ff6b6b','#a8e6cf',
-  '#ffd93d','#6bcb77','#4d96ff','#c77dff','#ffffff','#f8f0e3'];
-let recentColors = [];
 
 function buildSwatches() {
   const row = document.getElementById('swatchRow');
@@ -498,9 +500,6 @@ function updateUndoRedo() {
 }
 
 // ── TOOLS ─────────────────────────────────────────────────────
-let currentTool='pen', isDrawing=false, lastX=0, lastY=0;
-let shapeStart=null;
-
 function setTool(t) {
   if (currentTool==='text') commitText();
   currentTool=t;
