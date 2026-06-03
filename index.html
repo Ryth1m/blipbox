@@ -2,12 +2,142 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 <title>blipbox 📬</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="css/theme.css" />
 <script src="config/socials.js"></script>
+<style>
+/* ============================================================
+   DRAWING STUDIO — extra styles
+   ============================================================ */
+
+.studio {
+  margin-top: 24px;
+  border: 2px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--surface);
+}
+
+/* -- toolbar: scrollable row on mobile -- */
+.studio-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 12px;
+  background: var(--bg2);
+  border-bottom: 2px solid var(--border);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  flex-wrap: nowrap;
+}
+.studio-toolbar::-webkit-scrollbar { display: none; }
+
+/* -- brush buttons -- */
+.brush-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  background: var(--bg);
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  padding: 6px 10px;
+  cursor: pointer;
+  transition: all 0.12s;
+  white-space: nowrap;
+  flex-shrink: 0;
+  box-shadow: 2px 2px 0 var(--border);
+  min-width: 48px;
+}
+.brush-btn .bicon { font-size: 16px; line-height: 1; }
+.brush-btn:hover  { border-color: var(--accent2); color: var(--ink); }
+.brush-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); box-shadow: 2px 2px 0 #c03b00; }
+
+/* -- divider in toolbar -- */
+.tb-sep {
+  width: 1px;
+  height: 28px;
+  background: var(--border);
+  flex-shrink: 0;
+  margin: 0 2px;
+}
+
+/* -- size + color row -- */
+.studio-options {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: var(--bg2);
+  border-bottom: 2px solid var(--border);
+  flex-wrap: wrap;
+}
+.opt-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* -- undo/redo/clear -- */
+.studio-actions {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.act-btn {
+  background: var(--bg);
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 5px 10px;
+  cursor: pointer;
+  transition: all 0.12s;
+  box-shadow: 2px 2px 0 var(--border);
+}
+.act-btn:hover  { border-color: var(--accent); color: var(--ink); }
+.act-btn:active { transform: translate(1px,1px); box-shadow: none; }
+.act-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+/* -- canvas -- */
+.studio-canvas-wrap {
+  position: relative;
+  background: #fffdf8;
+  touch-action: none;
+  line-height: 0;
+}
+.drawing-canvas {
+  display: block;
+  width: 100%;
+  height: 280px;
+  cursor: crosshair;
+  touch-action: none;
+}
+@media (max-width: 480px) {
+  .drawing-canvas { height: 220px; }
+}
+
+/* -- brush preview dot -- */
+.brush-preview {
+  position: absolute;
+  pointer-events: none;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  opacity: 0.5;
+  display: none;
+}
+</style>
 </head>
 <body>
 
@@ -32,20 +162,54 @@
     <label class="field-label" for="msg">your message</label>
     <textarea id="msg"></textarea>
 
+    <!-- ======================================================
+         DRAWING STUDIO
+    ====================================================== -->
     <div style="margin-top:24px">
       <label class="field-label">
         draw something
         <span style="color:var(--accent3);font-size:10px">// optional</span>
       </label>
-      <div class="canvas-tools">
-        <button class="tool-btn active" id="toolPen"    onclick="setTool('pen')">✏ pen</button>
-        <button class="tool-btn"        id="toolEraser" onclick="setTool('eraser')">◻ eraser</button>
-        <input type="range" class="size-slider" id="brushSize" min="1" max="28" value="4" />
-        <input type="color" id="colorPicker" value="#2d2013" />
-        <button class="tool-btn" onclick="clearCanvas()">× clear</button>
+
+      <div class="studio">
+
+        <!-- brush picker -->
+        <div class="studio-toolbar" id="brushToolbar">
+          <button class="brush-btn active" data-tool="pen"        onclick="setTool('pen')">        <span class="bicon">🖊</span>pen</button>
+          <button class="brush-btn"        data-tool="pencil"     onclick="setTool('pencil')">     <span class="bicon">✏️</span>pencil</button>
+          <button class="brush-btn"        data-tool="marker"     onclick="setTool('marker')">     <span class="bicon">🖍</span>marker</button>
+          <button class="brush-btn"        data-tool="crayon"     onclick="setTool('crayon')">     <span class="bicon">🎨</span>crayon</button>
+          <button class="brush-btn"        data-tool="watercolor" onclick="setTool('watercolor')"> <span class="bicon">💧</span>water</button>
+          <button class="brush-btn"        data-tool="spray"      onclick="setTool('spray')">      <span class="bicon">💨</span>spray</button>
+          <button class="brush-btn"        data-tool="pixel"      onclick="setTool('pixel')">      <span class="bicon">🟦</span>pixel</button>
+          <button class="brush-btn"        data-tool="bucket"     onclick="setTool('bucket')">     <span class="bicon">🪣</span>fill</button>
+          <div class="tb-sep"></div>
+          <button class="brush-btn"        data-tool="eraser"     onclick="setTool('eraser')">     <span class="bicon">◻</span>eraser</button>
+        </div>
+
+        <!-- options row: size + color + undo/redo/clear -->
+        <div class="studio-options">
+          <span class="opt-label">size</span>
+          <input type="range" class="size-slider" id="brushSize" min="1" max="40" value="6" style="width:90px" />
+          <span class="opt-label" id="sizeVal">6</span>
+          <span class="opt-label" style="margin-left:6px">color</span>
+          <input type="color" id="colorPicker" value="#2d2013" />
+
+          <div class="studio-actions">
+            <button class="act-btn" id="undoBtn" onclick="undo()" title="undo">↩</button>
+            <button class="act-btn" id="redoBtn" onclick="redo()" title="redo">↪</button>
+            <button class="act-btn" onclick="clearCanvas()" title="clear">× clear</button>
+          </div>
+        </div>
+
+        <!-- canvas -->
+        <div class="studio-canvas-wrap" id="canvasWrap">
+          <canvas id="drawCanvas" class="drawing-canvas"></canvas>
+          <div class="brush-preview" id="brushPreview"></div>
+        </div>
+
       </div>
-      <canvas class="drawing-canvas" id="drawCanvas"></canvas>
-      <p class="canvas-hint">// mouse or finger — go wild</p>
+      <p class="canvas-hint">// scroll toolbar for more brushes · undo/redo works on mobile too</p>
     </div>
 
     <div class="submit-row">
@@ -54,82 +218,368 @@
     </div>
 
     <div class="status" id="status"></div>
-
   </div>
 
   <div class="footer fade-in delay-5">
     <p>blipbox — messages go straight to me ✌</p>
   </div>
-
 </div>
 
 <!-- emailjs -->
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 
-<!-- canvas engine -->
+<!-- ============================================================
+     CANVAS ENGINE
+     ============================================================ -->
 <script>
-// ============================================================
-//  CANVAS ENGINE
-// ============================================================
 const canvas  = document.getElementById('drawCanvas');
 const ctx     = canvas.getContext('2d');
-let isDrawing = false, tool = 'pen', lastX = 0, lastY = 0;
-let hasDrawn  = false;
+const preview = document.getElementById('brushPreview');
 
+let isDrawing = false;
+let currentTool = 'pen';
+let lastX = 0, lastY = 0;
+let hasDrawn = false;
+
+// -- undo/redo history (max 40 steps) -------------------------
+const MAX_HISTORY = 40;
+let history = [];
+let historyIndex = -1;
+
+function saveHistory() {
+  // drop any redo states ahead
+  history = history.slice(0, historyIndex + 1);
+  history.push(ctx.getImageData(0, 0, canvas.width, canvas.height));
+  if (history.length > MAX_HISTORY) history.shift();
+  historyIndex = history.length - 1;
+  updateUndoRedo();
+}
+
+function undo() {
+  if (historyIndex <= 0) return;
+  historyIndex--;
+  ctx.putImageData(history[historyIndex], 0, 0);
+  updateUndoRedo();
+}
+
+function redo() {
+  if (historyIndex >= history.length - 1) return;
+  historyIndex++;
+  ctx.putImageData(history[historyIndex], 0, 0);
+  updateUndoRedo();
+}
+
+function updateUndoRedo() {
+  document.getElementById('undoBtn').disabled = historyIndex <= 0;
+  document.getElementById('redoBtn').disabled = historyIndex >= history.length - 1;
+}
+
+// -- init canvas ----------------------------------------------
 function initCanvas() {
-  canvas.width  = canvas.offsetWidth;
-  canvas.height = canvas.offsetHeight;
+  const w = canvas.offsetWidth;
+  const h = canvas.offsetHeight;
+  canvas.width  = w;
+  canvas.height = h;
   ctx.fillStyle = '#fffdf8';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillRect(0, 0, w, h);
+  history = [];
+  historyIndex = -1;
+  saveHistory();
+  updateUndoRedo();
 }
 initCanvas();
+
+let resizeTimer;
 window.addEventListener('resize', () => {
-  const snap = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  initCanvas();
-  ctx.putImageData(snap, 0, 0);
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    const snap = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    initCanvas();
+    ctx.putImageData(snap, 0, 0);
+  }, 200);
 });
 
+// -- brush size display ---------------------------------------
+const sizeSlider = document.getElementById('brushSize');
+const sizeVal    = document.getElementById('sizeVal');
+sizeSlider.addEventListener('input', () => { sizeVal.textContent = sizeSlider.value; });
+
+// -- pointer position -----------------------------------------
 function getPos(e) {
   const r = canvas.getBoundingClientRect();
   const s = e.touches ? e.touches[0] : e;
-  return [s.clientX - r.left, s.clientY - r.top];
+  return [
+    (s.clientX - r.left) * (canvas.width  / r.width),
+    (s.clientY - r.top)  * (canvas.height / r.height),
+  ];
 }
-function stroke(e) {
+
+// -- brush preview cursor -------------------------------------
+canvas.addEventListener('mousemove', e => {
+  const size  = +sizeSlider.value;
+  const r     = canvas.getBoundingClientRect();
+  preview.style.display  = 'block';
+  preview.style.width    = size + 'px';
+  preview.style.height   = size + 'px';
+  preview.style.left     = (e.clientX - r.left) + 'px';
+  preview.style.top      = (e.clientY - r.top)  + 'px';
+  preview.style.background = currentTool === 'eraser' ? '#f0e0cc' : document.getElementById('colorPicker').value;
+});
+canvas.addEventListener('mouseleave', () => { preview.style.display = 'none'; });
+
+// -- draw event -----------------------------------------------
+function onStart(e) {
+  e.preventDefault();
+  isDrawing = true;
+  [lastX, lastY] = getPos(e);
+
+  // bucket fill on click
+  if (currentTool === 'bucket') {
+    floodFill(Math.round(lastX), Math.round(lastY), document.getElementById('colorPicker').value);
+    saveHistory();
+    hasDrawn = true;
+    isDrawing = false;
+    return;
+  }
+  // pixel: draw one square immediately
+  if (currentTool === 'pixel') {
+    drawPixel(lastX, lastY);
+  }
+}
+
+function onMove(e) {
+  e.preventDefault();
   if (!isDrawing) return;
   const [x, y] = getPos(e);
-  ctx.lineWidth   = tool === 'eraser' ? document.getElementById('brushSize').value * 3 : document.getElementById('brushSize').value;
-  ctx.lineCap     = 'round';
-  ctx.lineJoin    = 'round';
-  ctx.strokeStyle = tool === 'eraser' ? '#fffdf8' : document.getElementById('colorPicker').value;
-  ctx.beginPath(); ctx.moveTo(lastX, lastY); ctx.lineTo(x, y); ctx.stroke();
+  drawBrush(lastX, lastY, x, y);
   [lastX, lastY] = [x, y];
   hasDrawn = true;
 }
-canvas.addEventListener('mousedown',  e => { isDrawing = true; [lastX,lastY] = getPos(e); });
-canvas.addEventListener('mousemove',  e => stroke(e));
-canvas.addEventListener('mouseup',    () => isDrawing = false);
-canvas.addEventListener('mouseleave', () => isDrawing = false);
-canvas.addEventListener('touchstart', e => { e.preventDefault(); isDrawing = true; [lastX,lastY] = getPos(e); }, {passive:false});
-canvas.addEventListener('touchmove',  e => { e.preventDefault(); stroke(e); }, {passive:false});
-canvas.addEventListener('touchend',   () => isDrawing = false);
 
-function setTool(t) {
-  tool = t;
-  document.getElementById('toolPen').classList.toggle('active',    t==='pen');
-  document.getElementById('toolEraser').classList.toggle('active', t==='eraser');
+function onEnd(e) {
+  if (!isDrawing) return;
+  isDrawing = false;
+  saveHistory();
 }
+
+canvas.addEventListener('mousedown',  onStart);
+canvas.addEventListener('mousemove',  onMove);
+canvas.addEventListener('mouseup',    onEnd);
+canvas.addEventListener('mouseleave', e => { if (isDrawing) { isDrawing = false; saveHistory(); } });
+canvas.addEventListener('touchstart', onStart, { passive: false });
+canvas.addEventListener('touchmove',  onMove,  { passive: false });
+canvas.addEventListener('touchend',   onEnd,   { passive: false });
+canvas.addEventListener('touchcancel',onEnd,   { passive: false });
+
+// -- brush logic ----------------------------------------------
+function drawBrush(x0, y0, x1, y1) {
+  const size  = +sizeSlider.value;
+  const color = document.getElementById('colorPicker').value;
+
+  switch (currentTool) {
+
+    case 'pen':
+      ctx.globalAlpha   = 1;
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.lineWidth     = size;
+      ctx.lineCap       = 'round';
+      ctx.lineJoin      = 'round';
+      ctx.strokeStyle   = color;
+      ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+      break;
+
+    case 'pencil':
+      ctx.globalAlpha   = 0.7;
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.lineWidth     = Math.max(1, size * 0.5);
+      ctx.lineCap       = 'round';
+      ctx.strokeStyle   = color;
+      // pencil texture: slightly jittered lines
+      for (let i = 0; i < 3; i++) {
+        ctx.beginPath();
+        ctx.moveTo(x0 + (Math.random()-0.5)*size*0.4, y0 + (Math.random()-0.5)*size*0.4);
+        ctx.lineTo(x1 + (Math.random()-0.5)*size*0.4, y1 + (Math.random()-0.5)*size*0.4);
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+      break;
+
+    case 'marker':
+      ctx.globalAlpha   = 0.55;
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.lineWidth     = size * 2.5;
+      ctx.lineCap       = 'square';
+      ctx.lineJoin      = 'miter';
+      ctx.strokeStyle   = color;
+      ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+      ctx.globalAlpha = 1;
+      break;
+
+    case 'crayon': {
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+      // crayon = many tiny dots with noise
+      const dist = Math.hypot(x1-x0, y1-y0);
+      const steps = Math.max(1, Math.round(dist));
+      for (let i = 0; i <= steps; i++) {
+        const t  = steps === 0 ? 0 : i / steps;
+        const cx = x0 + (x1-x0)*t;
+        const cy = y0 + (y1-y0)*t;
+        for (let j = 0; j < 8; j++) {
+          ctx.globalAlpha = Math.random() * 0.4 + 0.1;
+          ctx.fillStyle   = color;
+          ctx.beginPath();
+          ctx.arc(
+            cx + (Math.random()-0.5)*size*1.2,
+            cy + (Math.random()-0.5)*size*1.2,
+            Math.random()*size*0.35 + 0.5, 0, Math.PI*2
+          );
+          ctx.fill();
+        }
+      }
+      ctx.globalAlpha = 1;
+      break;
+    }
+
+    case 'watercolor': {
+      // watercolor = soft blobs with low opacity
+      const dist2 = Math.hypot(x1-x0, y1-y0);
+      const steps2 = Math.max(1, Math.round(dist2 * 0.6));
+      for (let i = 0; i <= steps2; i++) {
+        const t  = steps2 === 0 ? 0 : i / steps2;
+        const cx = x0 + (x1-x0)*t;
+        const cy = y0 + (y1-y0)*t;
+        const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, size * 1.5);
+        grad.addColorStop(0,   hexToRgba(color, 0.12));
+        grad.addColorStop(0.5, hexToRgba(color, 0.06));
+        grad.addColorStop(1,   hexToRgba(color, 0));
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(cx + (Math.random()-0.5)*size*0.3, cy + (Math.random()-0.5)*size*0.3, size * 1.5, 0, Math.PI*2);
+        ctx.fill();
+      }
+      break;
+    }
+
+    case 'spray': {
+      const density = 30;
+      ctx.globalAlpha = 0.6;
+      ctx.fillStyle   = color;
+      for (let i = 0; i < density; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const r2    = Math.random() * size * 1.5;
+        ctx.beginPath();
+        ctx.arc(x1 + Math.cos(angle)*r2, y1 + Math.sin(angle)*r2, 0.8, 0, Math.PI*2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+      break;
+    }
+
+    case 'pixel':
+      drawPixel(x1, y1);
+      break;
+
+    case 'eraser':
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.globalAlpha  = 1;
+      ctx.lineWidth    = size * 2;
+      ctx.lineCap      = 'square';
+      ctx.strokeStyle  = '#fffdf8';
+      ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+      break;
+  }
+  // reset
+  ctx.globalAlpha = 1;
+  ctx.globalCompositeOperation = 'source-over';
+}
+
+function drawPixel(x, y) {
+  const size  = +sizeSlider.value;
+  const pSize = Math.max(4, Math.round(size * 1.5));
+  const px    = Math.floor(x / pSize) * pSize;
+  const py    = Math.floor(y / pSize) * pSize;
+  ctx.globalAlpha = 1;
+  ctx.fillStyle   = document.getElementById('colorPicker').value;
+  ctx.fillRect(px, py, pSize, pSize);
+}
+
+// -- flood fill (bucket) --------------------------------------
+function floodFill(startX, startY, fillColor) {
+  const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const data    = imgData.data;
+  const w       = canvas.width;
+  const h       = canvas.height;
+
+  const idx = (x, y) => (y * w + x) * 4;
+  const target = data.slice(idx(startX, startY), idx(startX, startY) + 4);
+  const fill   = hexToRgbArr(fillColor);
+
+  // same color check
+  if (target[0]===fill[0] && target[1]===fill[1] && target[2]===fill[2]) return;
+
+  function match(i) {
+    return Math.abs(data[i]-target[0]) < 30 &&
+           Math.abs(data[i+1]-target[1]) < 30 &&
+           Math.abs(data[i+2]-target[2]) < 30;
+  }
+
+  const stack = [[startX, startY]];
+  const visited = new Uint8Array(w * h);
+
+  while (stack.length) {
+    const [x, y] = stack.pop();
+    if (x < 0 || x >= w || y < 0 || y >= h) continue;
+    if (visited[y*w+x]) continue;
+    const i = idx(x, y);
+    if (!match(i)) continue;
+    visited[y*w+x] = 1;
+    data[i]=fill[0]; data[i+1]=fill[1]; data[i+2]=fill[2]; data[i+3]=255;
+    stack.push([x+1,y],[x-1,y],[x,y+1],[x,y-1]);
+  }
+  ctx.putImageData(imgData, 0, 0);
+}
+
+// -- clear ----------------------------------------------------
 function clearCanvas() {
   ctx.fillStyle = '#fffdf8';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   hasDrawn = false;
+  saveHistory();
 }
+
+// -- tool switch ----------------------------------------------
+function setTool(t) {
+  currentTool = t;
+  document.querySelectorAll('.brush-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.tool === t);
+  });
+  canvas.style.cursor = t === 'bucket' ? 'cell' : t === 'eraser' ? 'cell' : 'crosshair';
+}
+
+// -- color helpers --------------------------------------------
+function hexToRgba(hex, alpha) {
+  const r = parseInt(hex.slice(1,3),16);
+  const g = parseInt(hex.slice(3,5),16);
+  const b = parseInt(hex.slice(5,7),16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+function hexToRgbArr(hex) {
+  return [parseInt(hex.slice(1,3),16), parseInt(hex.slice(3,5),16), parseInt(hex.slice(5,7),16)];
+}
+
+// -- keyboard shortcuts (desktop) ----------------------------
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) { e.preventDefault(); undo(); }
+  if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key==='z' && e.shiftKey))) { e.preventDefault(); redo(); }
+});
 </script>
 
-<!-- submit engine -->
+<!-- ============================================================
+     SUBMIT ENGINE
+     ============================================================ -->
 <script>
-// ============================================================
-//  SUBMIT ENGINE — imgbb upload + emailjs send
-// ============================================================
 emailjs.init(BLIPBOX_CONFIG.emailjs.publicKey);
 
 async function submitBlip() {
@@ -139,38 +589,26 @@ async function submitBlip() {
   const btn = document.getElementById('submitBtn');
   btn.disabled = true;
 
-  // -- upload drawing if exists -----------------------------
   let drawingUrl = 'no drawing';
   if (hasDrawn) {
     showStatus('loading', '<div class="spinner"></div> uploading drawing...');
-    const base64 = canvas.toDataURL('image/png').split(',')[1];
+    const base64   = canvas.toDataURL('image/png').split(',')[1];
     const imgbbKey = BLIPBOX_CONFIG.imgbb.apiKey;
-
     try {
       const form = new FormData();
       form.append('image', base64);
       const res  = await fetch(`https://api.imgbb.com/1/upload?key=${imgbbKey}`, { method:'POST', body:form });
       const data = await res.json();
       if (data.success) drawingUrl = data.data.url;
-    } catch(e) {
-      drawingUrl = '(drawing upload failed)';
-    }
+    } catch(e) { drawingUrl = '(drawing upload failed)'; }
   }
 
-  // -- send email via emailjs -------------------------------
   showStatus('loading', '<div class="spinner"></div> sending...');
-
-  const templateParams = {
-    message:    msg,
-    drawing:    drawingUrl,
-    sent_at:    new Date().toUTCString(),
-  };
-
   try {
     await emailjs.send(
       BLIPBOX_CONFIG.emailjs.serviceId,
       BLIPBOX_CONFIG.emailjs.templateId,
-      templateParams
+      { message: msg, drawing: drawingUrl, sent_at: new Date().toUTCString() }
     );
     showStatus('success', "📬 blip sent! i'll see it.");
     document.getElementById('msg').value = '';
@@ -178,7 +616,6 @@ async function submitBlip() {
   } catch(e) {
     showStatus('error', `✗ failed: ${e.text || e.message || 'unknown error'}`);
   }
-
   btn.disabled = false;
 }
 
@@ -189,20 +626,19 @@ function showStatus(type, html) {
 }
 </script>
 
-<!-- build page from config -->
+<!-- ============================================================
+     BUILD PAGE FROM CONFIG
+     ============================================================ -->
 <script>
 (function() {
   const c = BLIPBOX_CONFIG, t = c.text;
-
   document.getElementById('headline').innerHTML =
     `${t.headline_line1.split(' ')[0]} <span class="pop">${t.headline_line1.split(' ').slice(1).join(' ')}</span><br/>
      <span class="pop2">${t.headline_line2}</span>`;
-
-  document.getElementById('subtitle').textContent  = t.subtitle;
-  document.getElementById('msg').placeholder        = t.placeholder;
-  document.getElementById('kofiBtn').href           = c.links.kofi;
-  document.getElementById('kofiBtn').textContent    = t.kofi_label;
-
+  document.getElementById('subtitle').textContent = t.subtitle;
+  document.getElementById('msg').placeholder       = t.placeholder;
+  document.getElementById('kofiBtn').href          = c.links.kofi;
+  document.getElementById('kofiBtn').textContent   = t.kofi_label;
   const chipsEl = document.getElementById('chips');
   c.chips.forEach(chip => {
     const el = chip.link ? document.createElement('a') : document.createElement('span');

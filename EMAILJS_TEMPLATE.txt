@@ -1,42 +1,62 @@
-<div style="font-family: 'Nunito', system-ui, sans-serif; background-color: #fff9f0; background-image: radial-gradient(#f0e0cc 1.5px, transparent 1.5px); background-size: 24px 24px; padding: 48px 16px;">
-  <div style="max-width: 540px; margin: 0 auto;">
+<table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#fff9f0" style="background-color:#fff9f0;">
+<tr><td align="center" bgcolor="#fff9f0" style="background-color:#fff9f0; padding:40px 16px;">
+
+  <table width="520" cellpadding="0" cellspacing="0" border="0" style="max-width:520px; width:100%;">
 
     <!-- badge -->
-    <div style="margin-bottom: 20px;">
-      <span style="display: inline-block; background: #ff6b35; color: #fff; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; padding: 6px 16px; border-radius: 99px; box-shadow: 3px 3px 0 #2d2013;">
-        ● blipbox
-      </span>
-    </div>
+    <tr><td style="padding-bottom:18px;">
+      <table cellpadding="0" cellspacing="0" border="0"><tr>
+        <td bgcolor="#ff6b35" style="background-color:#ff6b35; border-radius:99px; padding:6px 16px;">
+          <span style="font-family:system-ui,sans-serif; font-size:11px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:#ffffff;">📬 blipbox</span>
+        </td>
+      </tr></table>
+    </td></tr>
 
     <!-- headline -->
-    <h1 style="font-size: 36px; font-weight: 900; color: #2d2013; margin: 0 0 32px; line-height: 1.1; letter-spacing: -1px;">
-      someone<br/>
-      <span style="display: inline-block; background: #ffb830; color: #2d2013; padding: 2px 12px; border-radius: 8px; transform: rotate(-1deg); box-shadow: 3px 3px 0 #ff6b35;">dropped</span>
-      you a blip!
-    </h1>
+    <tr><td style="padding-bottom:28px;">
+      <div style="font-family:system-ui,sans-serif; font-size:30px; font-weight:900; color:#2d2013; line-height:1.15;">
+        someone dropped<br/>
+        <table cellpadding="0" cellspacing="0" border="0" style="display:inline-table; margin-top:4px;"><tr>
+          <td bgcolor="#ffb830" style="background-color:#ffb830; border-radius:8px; padding:2px 12px;">
+            <span style="font-family:system-ui,sans-serif; font-size:30px; font-weight:900; color:#2d2013;">you a blip!</span>
+          </td>
+        </tr></table>
+      </div>
+    </td></tr>
 
     <!-- message card -->
-    <div style="background: #ffffff; border: 2px solid #f0e0cc; border-radius: 20px; box-shadow: 5px 5px 0 #f0e0cc; margin-bottom: 16px; overflow: hidden;">
-      <div style="padding: 10px 20px; border-bottom: 2px solid #f0e0cc; background: #fff3e0;">
-        <span style="font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #a08060;">✉ message</span>
-      </div>
-      <div style="padding: 20px; font-size: 15px; color: #2d2013; line-height: 1.7; white-space: pre-wrap; word-break: break-word;">{{message}}</div>
-    </div>
+    <tr><td style="padding-bottom:14px;">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff" style="background-color:#ffffff; border:2px solid #f0dcc8; border-radius:16px;">
+        <tr><td bgcolor="#fff0dd" style="background-color:#fff0dd; padding:10px 18px; border-bottom:2px solid #f0dcc8; border-radius:14px 14px 0 0;">
+          <span style="font-family:system-ui,sans-serif; font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:#a08060;">✉ message</span>
+        </td></tr>
+        <tr><td bgcolor="#ffffff" style="background-color:#ffffff; padding:18px; font-family:system-ui,sans-serif; font-size:15px; color:#2d2013; line-height:1.7; word-break:break-word;">
+          {{message}}
+        </td></tr>
+      </table>
+    </td></tr>
 
     <!-- drawing card -->
-    <div style="background: #ffffff; border: 2px solid #f0e0cc; border-radius: 20px; box-shadow: 5px 5px 0 #f0e0cc; margin-bottom: 16px; overflow: hidden;">
-      <div style="padding: 10px 20px; border-bottom: 2px solid #f0e0cc; background: #fff3e0;">
-        <span style="font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #a08060;">🎨 drawing</span>
-      </div>
-      <div style="padding: 20px;">
-        <img src="{{drawing}}" alt="drawing" style="width: 100%; border-radius: 10px; border: 2px solid #f0e0cc; display: block;" />
-      </div>
-    </div>
+    <tr><td style="padding-bottom:14px;">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff" style="background-color:#ffffff; border:2px solid #f0dcc8; border-radius:16px;">
+        <tr><td bgcolor="#fff0dd" style="background-color:#fff0dd; padding:10px 18px; border-bottom:2px solid #f0dcc8; border-radius:14px 14px 0 0;">
+          <span style="font-family:system-ui,sans-serif; font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:#a08060;">🎨 drawing</span>
+        </td></tr>
+        <tr><td bgcolor="#ffffff" style="background-color:#ffffff; padding:16px;">
+          <img src="{{drawing}}" alt="drawing" width="100%" style="display:block; width:100%; height:auto; border-radius:10px; border:2px solid #f0dcc8;" />
+          <div style="margin-top:10px; font-family:system-ui,sans-serif; font-size:12px; color:#a08060;">
+            can't see it? <a href="{{drawing}}" style="color:#ff6b35; text-decoration:underline;">open drawing ↗</a>
+          </div>
+        </td></tr>
+      </table>
+    </td></tr>
 
     <!-- footer -->
-    <div style="text-align: center; font-size: 11px; color: #a08060; letter-spacing: 0.08em; margin-top: 24px;">
+    <tr><td align="center" style="padding-top:16px; font-family:system-ui,sans-serif; font-size:11px; color:#a08060; letter-spacing:0.08em;">
       blipbox · {{sent_at}}<br/>only you can see this ✌
-    </div>
+    </td></tr>
 
-  </div>
-</div>
+  </table>
+
+</td></tr>
+</table>

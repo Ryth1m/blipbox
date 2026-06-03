@@ -440,9 +440,45 @@ input[type="color"] {
 /* ------------------------------------------------------------
    RESPONSIVE
    ------------------------------------------------------------ */
+
+/* -- tablet -- */
+@media (max-width: 640px) {
+  .headline { font-size: clamp(36px, 10vw, 60px); }
+  .chips    { gap: 8px; }
+  .chip     { font-size: 10px; padding: 6px 10px; }
+}
+
+/* -- mobile -- */
 @media (max-width: 480px) {
-  .page       { padding: 40px 16px 80px; }
-  .card       { padding: 18px; }
-  .submit-row { flex-direction: column; align-items: stretch; }
-  .submit-btn { text-align: center; }
+  .page        { padding: 32px 14px 80px; }
+  .card        { padding: 16px; border-radius: 16px; }
+  .submit-row  { flex-direction: column; align-items: stretch; }
+  .submit-btn  { text-align: center; width: 100%; }
+  .anon-note   { text-align: center; }
+
+  /* headline tighter on small screens */
+  .headline    { letter-spacing: -0.5px; margin-bottom: 4px; }
+  .sub         { font-size: 13px; margin-bottom: 28px; }
+
+  /* chips wrap tighter */
+  .chips       { margin-bottom: 28px; }
+
+  /* ko-fi full width */
+  .kofi-btn    { width: 100%; justify-content: center; margin-bottom: 32px; }
+
+  /* section label smaller */
+  .section-label { font-size: 10px; }
+
+  /* textarea bigger on mobile for easier typing */
+  textarea     { min-height: 90px; font-size: 16px; } /* 16px prevents iOS zoom */
+
+  /* status text smaller */
+  .status      { font-size: 12px; }
+}
+
+/* -- prevent iOS input zoom (font-size must be >= 16px on inputs) -- */
+@media (max-width: 768px) {
+  input[type="color"]  { min-height: 36px; min-width: 36px; }
+  input[type="range"]  { height: 20px; }
+  select, input, textarea { font-size: 16px; }
 }
