@@ -1,0 +1,24 @@
+============================================================
+  EMAILJS TEMPLATE — copy this when creating your template
+  on emailjs.com → Email Templates → Create New Template
+============================================================
+
+Subject:
+  📬 new blip!
+
+Body:
+  someone sent you a blip!
+
+  Message:
+  {{message}}
+
+  Drawing:
+  {{drawing}}
+
+  Sent at:
+  {{sent_at}}
+
+============================================================
+  IMPORTANT: the variable names must match exactly:
+    {{message}}   {{drawing}}   {{sent_at}}
+============================================================

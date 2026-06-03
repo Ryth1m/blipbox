@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>blipbox 📬</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="css/theme.css" />
+<script src="config/socials.js"></script>
+</head>
+<body>
+
+<div class="deco-blob a"></div>
+<div class="deco-blob b"></div>
+<div class="deco-blob c"></div>
+
+<div class="page">
+
+  <div class="badge fade-in"><span class="dot-live"></span>blipbox</div>
+  <h1 class="headline fade-in delay-1" id="headline"></h1>
+  <p class="sub fade-in delay-2" id="subtitle"></p>
+  <div class="chips fade-in delay-2" id="chips"></div>
+  <a class="kofi-btn fade-in delay-3" id="kofiBtn" href="#" target="_blank" rel="noopener"></a>
+
+  <div class="section-label fade-in delay-3">
+    <span class="num">01</span>send a blip
+  </div>
+
+  <div class="card fade-in delay-4">
+
+    <label class="field-label" for="msg">your message</label>
+    <textarea id="msg"></textarea>
+
+    <div style="margin-top:24px">
+      <label class="field-label">
+        draw something
+        <span style="color:var(--accent3);font-size:10px">// optional</span>
+      </label>
+      <div class="canvas-tools">
+        <button class="tool-btn active" id="toolPen"    onclick="setTool('pen')">✏ pen</button>
+        <button class="tool-btn"        id="toolEraser" onclick="setTool('eraser')">◻ eraser</button>
+        <input type="range" class="size-slider" id="brushSize" min="1" max="28" value="4" />
+        <input type="color" id="colorPicker" value="#2d2013" />
+        <button class="tool-btn" onclick="clearCanvas()">× clear</button>
+      </div>
+      <canvas class="drawing-canvas" id="drawCanvas"></canvas>
+      <p class="canvas-hint">// mouse or finger — go wild</p>
+    </div>
+
+    <div class="submit-row">
+      <p class="anon-note">you're <strong>anonymous</strong> by default.<br/>only i'll see this 🤝</p>
+      <button class="submit-btn" id="submitBtn" onclick="submitBlip()">send blip 📬</button>
+    </div>
+
+    <div class="status" id="status"></div>
+
+  </div>
+
+  <div class="footer fade-in delay-5">
+    <p>blipbox — messages go straight to me ✌</p>
+  </div>
+
+</div>
+
+<!-- emailjs -->
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+
+<!-- canvas engine -->
+<script>
+// ============================================================
+//  CANVAS ENGINE
+// ============================================================
+const canvas  = document.getElementById('drawCanvas');
+const ctx     = canvas.getContext('2d');
+let isDrawing = false, tool = 'pen', lastX = 0, lastY = 0;
+let hasDrawn  = false;
+
+function initCanvas() {
+  canvas.width  = canvas.offsetWidth;
+  canvas.height = canvas.offsetHeight;
+  ctx.fillStyle = '#fffdf8';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+}
+initCanvas();
+window.addEventListener('resize', () => {
+  const snap = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  initCanvas();
+  ctx.putImageData(snap, 0, 0);
+});
+
+function getPos(e) {
+  const r = canvas.getBoundingClientRect();
+  const s = e.touches ? e.touches[0] : e;
+  return [s.clientX - r.left, s.clientY - r.top];
+}
+function stroke(e) {
+  if (!isDrawing) return;
+  const [x, y] = getPos(e);
+  ctx.lineWidth   = tool === 'eraser' ? document.getElementById('brushSize').value * 3 : document.getElementById('brushSize').value;
+  ctx.lineCap     = 'round';
+  ctx.lineJoin    = 'round';
+  ctx.strokeStyle = tool === 'eraser' ? '#fffdf8' : document.getElementById('colorPicker').value;
+  ctx.beginPath(); ctx.moveTo(lastX, lastY); ctx.lineTo(x, y); ctx.stroke();
+  [lastX, lastY] = [x, y];
+  hasDrawn = true;
+}
+canvas.addEventListener('mousedown',  e => { isDrawing = true; [lastX,lastY] = getPos(e); });
+canvas.addEventListener('mousemove',  e => stroke(e));
+canvas.addEventListener('mouseup',    () => isDrawing = false);
+canvas.addEventListener('mouseleave', () => isDrawing = false);
+canvas.addEventListener('touchstart', e => { e.preventDefault(); isDrawing = true; [lastX,lastY] = getPos(e); }, {passive:false});
+canvas.addEventListener('touchmove',  e => { e.preventDefault(); stroke(e); }, {passive:false});
+canvas.addEventListener('touchend',   () => isDrawing = false);
+
+function setTool(t) {
+  tool = t;
+  document.getElementById('toolPen').classList.toggle('active',    t==='pen');
+  document.getElementById('toolEraser').classList.toggle('active', t==='eraser');
+}
+function clearCanvas() {
+  ctx.fillStyle = '#fffdf8';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  hasDrawn = false;
+}
+</script>
+
+<!-- submit engine -->
+<script>
+// ============================================================
+//  SUBMIT ENGINE — imgbb upload + emailjs send
+// ============================================================
+emailjs.init(BLIPBOX_CONFIG.emailjs.publicKey);
+
+async function submitBlip() {
+  const msg = document.getElementById('msg').value.trim();
+  if (!msg) { showStatus('error', '✗ write something first!'); return; }
+
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+
+  // -- upload drawing if exists -----------------------------
+  let drawingUrl = 'no drawing';
+  if (hasDrawn) {
+    showStatus('loading', '<div class="spinner"></div> uploading drawing...');
+    const base64 = canvas.toDataURL('image/png').split(',')[1];
+    const imgbbKey = BLIPBOX_CONFIG.imgbb.apiKey;
+
+    try {
+      const form = new FormData();
+      form.append('image', base64);
+      const res  = await fetch(`https://api.imgbb.com/1/upload?key=${imgbbKey}`, { method:'POST', body:form });
+      const data = await res.json();
+      if (data.success) drawingUrl = data.data.url;
+    } catch(e) {
+      drawingUrl = '(drawing upload failed)';
+    }
+  }
+
+  // -- send email via emailjs -------------------------------
+  showStatus('loading', '<div class="spinner"></div> sending...');
+
+  const templateParams = {
+    message:    msg,
+    drawing:    drawingUrl,
+    sent_at:    new Date().toUTCString(),
+  };
+
+  try {
+    await emailjs.send(
+      BLIPBOX_CONFIG.emailjs.serviceId,
+      BLIPBOX_CONFIG.emailjs.templateId,
+      templateParams
+    );
+    showStatus('success', "📬 blip sent! i'll see it.");
+    document.getElementById('msg').value = '';
+    clearCanvas();
+  } catch(e) {
+    showStatus('error', `✗ failed: ${e.text || e.message || 'unknown error'}`);
+  }
+
+  btn.disabled = false;
+}
+
+function showStatus(type, html) {
+  const el = document.getElementById('status');
+  el.className = `status ${type}`;
+  el.innerHTML = html;
+}
+</script>
+
+<!-- build page from config -->
+<script>
+(function() {
+  const c = BLIPBOX_CONFIG, t = c.text;
+
+  document.getElementById('headline').innerHTML =
+    `${t.headline_line1.split(' ')[0]} <span class="pop">${t.headline_line1.split(' ').slice(1).join(' ')}</span><br/>
+     <span class="pop2">${t.headline_line2}</span>`;
+
+  document.getElementById('subtitle').textContent  = t.subtitle;
+  document.getElementById('msg').placeholder        = t.placeholder;
+  document.getElementById('kofiBtn').href           = c.links.kofi;
+  document.getElementById('kofiBtn').textContent    = t.kofi_label;
+
+  const chipsEl = document.getElementById('chips');
+  c.chips.forEach(chip => {
+    const el = chip.link ? document.createElement('a') : document.createElement('span');
+    el.className = 'chip';
+    if (chip.link) { el.href = chip.link; el.target = '_blank'; el.rel = 'noopener'; }
+    el.innerHTML = `<span class="icon">${chip.icon}</span> ${chip.label}`;
+    chipsEl.appendChild(el);
+  });
+})();
+</script>
+
+</body>
+</html>
