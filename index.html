@@ -114,6 +114,68 @@ input[type="color"] { width:32px; height:32px; border:2px solid var(--border); b
 .layer-del { background:none; border:none; cursor:pointer; font-size:12px; color:var(--muted); flex-shrink:0; }
 .layer-del:hover { color:#ff4444; }
 .layer-opacity { width:60px; flex-shrink:0; }
+
+/* ── DRAWING PREVIEW MODAL ───────────────────────────────── */
+.preview-modal {
+  display:none; position:fixed; inset:0; z-index:1000;
+  background:rgba(0,0,0,0.6); backdrop-filter:blur(6px);
+  align-items:center; justify-content:center; padding:20px;
+}
+.preview-modal.open { display:flex; }
+.preview-box {
+  background:var(--surface); border:2px solid var(--border);
+  border-radius:20px; box-shadow:6px 6px 0 var(--border);
+  padding:24px; max-width:560px; width:100%;
+  animation: popIn 0.2s cubic-bezier(0.34,1.56,0.64,1) both;
+}
+@keyframes popIn { from{transform:scale(0.85);opacity:0} to{transform:scale(1);opacity:1} }
+.preview-box h3 {
+  font-family:var(--font-display); font-weight:900; font-size:18px;
+  color:var(--ink); margin-bottom:16px;
+}
+.preview-img {
+  width:100%; border-radius:12px; border:2px solid var(--border);
+  background:#fffdf8; display:block; margin-bottom:16px;
+  image-rendering:pixelated;
+}
+.preview-actions { display:flex; gap:10px; flex-wrap:wrap; }
+.preview-actions .submit-btn { flex:1; text-align:center; }
+.preview-actions .act-btn { flex:1; text-align:center; padding:12px; font-size:13px; }
+
+/* ── CONFETTI CANVAS ─────────────────────────────────────── */
+#confettiCanvas {
+  position:fixed; inset:0; pointer-events:none;
+  z-index:2000; display:none;
+}
+
+/* ── SEND ANIMATION ─────────────────────────────────────── */
+.send-anim {
+  display:none; flex-direction:column; align-items:center;
+  justify-content:center; gap:12px; padding:32px;
+  text-align:center;
+}
+.send-anim.show { display:flex; }
+.send-rocket {
+  font-size:48px;
+  animation: rocketUp 1s ease-in-out infinite alternate;
+}
+@keyframes rocketUp {
+  from { transform:translateY(0) rotate(-10deg); }
+  to   { transform:translateY(-14px) rotate(10deg); }
+}
+.send-anim p {
+  font-family:var(--font-mono); font-size:12px; color:var(--muted);
+}
+
+/* ── CHAR COUNTER ────────────────────────────────────────── */
+.char-wrap { position:relative; }
+.char-count {
+  position:absolute; bottom:10px; right:12px;
+  font-family:var(--font-mono); font-size:10px; color:var(--muted);
+  pointer-events:none;
+}
+.char-count.warn { color:var(--accent); }
+
 </style>
 </head>
 <body>
@@ -133,7 +195,6 @@ input[type="color"] { width:32px; height:32px; border:2px solid var(--border); b
 
   <div class="card fade-in delay-4">
     <label class="field-label" for="msg">your message</label>
-    <textarea id="msg"></textarea>
 
     <div style="margin-top:20px">
       <label class="field-label">
@@ -208,12 +269,43 @@ input[type="color"] { width:32px; height:32px; border:2px solid var(--border); b
       <p class="canvas-hint">// scroll toolbar for more tools · Ctrl+Z undo · tap layer name to rename</p>
     </div>
 
-    <div class="submit-row">
+    <!-- char counter wrapper -->
+    <div class="char-wrap">
+      <textarea id="msg" style="padding-bottom:28px"></textarea>
+      <span class="char-count" id="charCount">0 / 500</span>
+    </div>
+
+    <div class="submit-row" style="margin-top:16px">
       <p class="anon-note">you're <strong>anonymous</strong> by default.<br/>only i'll see this 🤝</p>
-      <button class="submit-btn" id="submitBtn" onclick="submitBlip()">send blip 📬</button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="act-btn" onclick="saveDrawingImage()" title="save drawing as image">💾 save drawing</button>
+        <button class="submit-btn" id="submitBtn" onclick="submitBlip()">send blip 📬</button>
+      </div>
     </div>
     <div class="status" id="status"></div>
   </div>
+
+<!-- confetti canvas -->
+<canvas id="confettiCanvas"></canvas>
+
+<!-- drawing preview modal -->
+<div class="preview-modal" id="previewModal">
+  <div class="preview-box">
+    <h3>📬 ready to send?</h3>
+    <img class="preview-img" id="previewImg" src="" alt="your drawing" />
+    <div class="preview-actions">
+      <button class="act-btn" onclick="saveDrawingImage()">💾 save image</button>
+      <button class="act-btn" onclick="closePreview()">← edit more</button>
+      <button class="submit-btn" onclick="doSend()">send blip 📬</button>
+    </div>
+  </div>
+</div>
+
+<!-- send animation overlay (replaces card content while sending) -->
+<div class="send-anim" id="sendAnim">
+  <div class="send-rocket">🚀</div>
+  <p id="sendAnimMsg">sending your blip...</p>
+</div>
 
   <div class="footer fade-in delay-5"><p>blipbox — messages go straight to me ✌</p></div>
 </div>
@@ -628,15 +720,16 @@ function commitShape(x0,y0,x1,y1) {
 let textX=0, textY=0;
 function placeText(x,y) {
   textX=x; textY=y;
-  const r=drawCanvas.getBoundingClientRect();
-  const r2=drawCanvas.getBoundingClientRect();
-  const sx=x*(r2.width/canvasW)+r2.left-wrap.getBoundingClientRect().left;
-  const sy=y*(r2.height/canvasH)+r2.top-wrap.getBoundingClientRect().top;
+  // convert canvas coords to pixel position relative to wrap
+  const cr=drawCanvas.getBoundingClientRect();
+  const wr=wrap.getBoundingClientRect();
+  const sx = x*(cr.width/canvasW) + (cr.left-wr.left);
+  const sy = y*(cr.height/canvasH) + (cr.top-wr.top);
   const size=+document.getElementById('brushSize').value;
   textOverlay.style.display='block';
   textOverlay.style.left=sx+'px';
   textOverlay.style.top=sy+'px';
-  textOverlay.style.fontSize=(size*2)+'px';
+  textOverlay.style.fontSize=Math.max(12,size*2)+'px';
   textOverlay.style.color=document.getElementById('colorPicker').value;
   textOverlay.value='';
   textOverlay.focus();
@@ -730,44 +823,141 @@ function getFlatCanvas() {
 <script>
 emailjs.init(BLIPBOX_CONFIG.emailjs.publicKey);
 
-async function submitBlip() {
-  const msg=document.getElementById('msg').value.trim();
-  if(!msg){showStatus('error','✗ write something first!');return;}
-  const btn=document.getElementById('submitBtn');
-  btn.disabled=true;
+// ── CHAR COUNTER ──────────────────────────────────────────────
+const MAX_CHARS = 500;
+const msgEl   = document.getElementById('msg');
+const countEl = document.getElementById('charCount');
+msgEl.addEventListener('input', () => {
+  const n = msgEl.value.length;
+  countEl.textContent = `${n} / ${MAX_CHARS}`;
+  countEl.classList.toggle('warn', n > MAX_CHARS * 0.85);
+  if (n > MAX_CHARS) msgEl.value = msgEl.value.slice(0, MAX_CHARS);
+});
 
-  let drawingUrl='no drawing';
-  if(hasDrawn){
-    showStatus('loading','<div class="spinner"></div> uploading drawing...');
-    const base64=getFlatCanvas().toDataURL('image/png').split(',')[1];
-    try{
-      const form=new FormData(); form.append('image',base64);
-      const res=await fetch(`https://api.imgbb.com/1/upload?key=${BLIPBOX_CONFIG.imgbb.apiKey}`,{method:'POST',body:form});
-      const data=await res.json();
-      if(data.success) drawingUrl=data.data.url;
-    }catch(e){drawingUrl='(upload failed)';}
+// ── SAVE DRAWING AS IMAGE ─────────────────────────────────────
+function saveDrawingImage() {
+  if (!hasDrawn) { alert('draw something first! 🎨'); return; }
+  const flat = getFlatCanvas();
+  const link = document.createElement('a');
+  link.download = 'blipbox-drawing.png';
+  link.href = flat.toDataURL('image/png');
+  link.click();
+}
+
+// ── PREVIEW MODAL ─────────────────────────────────────────────
+function submitBlip() {
+  const msg = msgEl.value.trim();
+  if (!msg) { showStatus('error', '✗ write something first!'); return; }
+
+  if (hasDrawn) {
+    // show preview first
+    const flat = getFlatCanvas();
+    document.getElementById('previewImg').src = flat.toDataURL('image/png');
+    document.getElementById('previewModal').classList.add('open');
+  } else {
+    doSend();
+  }
+}
+
+function closePreview() {
+  document.getElementById('previewModal').classList.remove('open');
+}
+
+// ── ACTUAL SEND ───────────────────────────────────────────────
+async function doSend() {
+  closePreview();
+  const msg = msgEl.value.trim();
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+
+  // show rocket send animation
+  const card     = document.querySelector('.card');
+  const sendAnim = document.getElementById('sendAnim');
+  const cardContent = card.innerHTML;
+  card.innerHTML = '';
+  card.appendChild(sendAnim);
+  sendAnim.classList.add('show');
+  document.getElementById('sendAnimMsg').textContent = 'uploading...';
+
+  let drawingUrl = 'no drawing';
+  if (hasDrawn) {
+    const base64 = getFlatCanvas().toDataURL('image/png').split(',')[1];
+    try {
+      const form = new FormData(); form.append('image', base64);
+      const res  = await fetch(`https://api.imgbb.com/1/upload?key=${BLIPBOX_CONFIG.imgbb.apiKey}`, {method:'POST',body:form});
+      const data = await res.json();
+      if (data.success) drawingUrl = data.data.url;
+    } catch(e) { drawingUrl = '(upload failed)'; }
   }
 
-  showStatus('loading','<div class="spinner"></div> sending...');
-  try{
+  document.getElementById('sendAnimMsg').textContent = 'sending your blip...';
+
+  try {
     await emailjs.send(
       BLIPBOX_CONFIG.emailjs.serviceId,
       BLIPBOX_CONFIG.emailjs.templateId,
-      {message:msg,drawing:drawingUrl,sent_at:new Date().toUTCString()}
+      { message: msg, drawing: drawingUrl, sent_at: new Date().toUTCString() }
     );
-    showStatus('success',"📬 blip sent! i'll see it.");
-    document.getElementById('msg').value='';
-    layers.forEach(l=>l.ctx.clearRect(0,0,l.canvas.width,l.canvas.height));
-    renderAllLayers(); saveHistory(); hasDrawn=false;
-  }catch(e){
-    showStatus('error',`✗ failed: ${e.text||e.message||'unknown error'}`);
+
+    // restore card, show success, fire confetti
+    card.innerHTML = cardContent;
+    showStatus('success', "📬 blip sent! i'll see it.");
+    msgEl.value = '';
+    countEl.textContent = '0 / 500';
+    layers.forEach(l => l.ctx.clearRect(0,0,l.canvas.width,l.canvas.height));
+    renderAllLayers(); saveHistory(); hasDrawn = false;
+    fireConfetti();
+
+  } catch(e) {
+    card.innerHTML = cardContent;
+    showStatus('error', `✗ failed: ${e.text||e.message||'unknown error'}`);
   }
-  btn.disabled=false;
+
+  btn.disabled = false;
 }
 
-function showStatus(type,html){
-  const el=document.getElementById('status');
-  el.className=`status ${type}`; el.innerHTML=html;
+function showStatus(type, html) {
+  const el = document.getElementById('status');
+  el.className = `status ${type}`; el.innerHTML = html;
+}
+
+// ── CONFETTI ──────────────────────────────────────────────────
+function fireConfetti() {
+  const cc  = document.getElementById('confettiCanvas');
+  cc.style.display = 'block';
+  cc.width  = window.innerWidth;
+  cc.height = window.innerHeight;
+  const ctx = cc.getContext('2d');
+  const pieces = Array.from({length:120}, () => ({
+    x: Math.random() * cc.width,
+    y: Math.random() * cc.height - cc.height,
+    r: Math.random()*6+3,
+    d: Math.random()*3+1,
+    color: ['#ff6b35','#ffb830','#4ecdc4','#ff6b6b','#6bcb77','#4d96ff','#c77dff'][Math.floor(Math.random()*7)],
+    tilt: Math.random()*10-5,
+    tiltSpeed: Math.random()*0.2+0.05,
+    spin: 0,
+  }));
+  let frame = 0;
+  function draw() {
+    ctx.clearRect(0,0,cc.width,cc.height);
+    pieces.forEach(p => {
+      p.y   += p.d + Math.sin(frame*0.04)*1.2;
+      p.spin += p.tiltSpeed;
+      p.tilt = Math.sin(p.spin) * 12;
+      if (p.y > cc.height) { p.y = -10; p.x = Math.random()*cc.width; }
+      ctx.beginPath();
+      ctx.lineWidth = p.r/2;
+      ctx.strokeStyle = p.color;
+      ctx.moveTo(p.x+p.tilt, p.y);
+      ctx.lineTo(p.x+p.tilt+p.r*Math.cos(p.spin), p.y+p.r*Math.sin(p.spin));
+      ctx.stroke();
+    });
+    frame++;
+    if (frame < 180) requestAnimationFrame(draw);
+    else { ctx.clearRect(0,0,cc.width,cc.height); cc.style.display='none'; }
+  }
+  draw();
 }
 </script>
 
