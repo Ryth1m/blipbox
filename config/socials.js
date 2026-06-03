@@ -16,19 +16,19 @@ const BLIPBOX_CONFIG = {
   // permissions: Issues → Read only
   // this is safe to have here since it can only read, not write
   github: {
-    owner: 'YOUR_GITHUB_USERNAME',   // e.g. 'Ryth1m'
+    owner: 'Ryth1m',   // e.g. 'Ryth1m'
     repo:  'blipbox',
-    token: 'YOUR_READ_ONLY_PAT',
+    token: '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',
   },
 
   // -- inbox secret slug ------------------------------------
   // your inbox lives at: yoursite.netlify.app/inbox-SLUG.html
   // rename inbox-YOURSLUG.html to match — this is your "password"
-  inboxSlug: 'change-this-to-something-secret',
+  inboxSlug: 'Gaylover16',
 
   // -- your links -------------------------------------------
   links: {
-    kofi:    'https://ko-fi.com/YOUR_KOFI',
+    kofi:    'https://ko-fi.com/ryth1ms',
     youtube: '',   // '' to hide
     roblox:  '',   // '' to hide
     github:  '',   // '' to hide
@@ -38,7 +38,7 @@ const BLIPBOX_CONFIG = {
   chips: [
     { icon: '🧱', label: 'roblox modeller', link: '' },
     { icon: '🎮', label: 'game dev',        link: '' },
-    { icon: '📺', label: 'youtuber',        link: '' },
+    { icon: '🔞', label: '19',        link: '' },
     { icon: '✍️', label: 'writer',          link: '' },
     { icon: '🤓', label: 'just a creator',  link: '' },
   ],
