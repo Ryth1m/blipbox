@@ -1,27 +1,29 @@
 // ============================================================
 //  config/socials.js
-//  ► YOUR INFO LIVES HERE — only file you need to edit.
+//  ► YOUR INFO LIVES HERE — the only file you need to edit.
 // ============================================================
 
 const BLIPBOX_CONFIG = {
 
-  // -- cloudflare worker URL --------------------------------
-  // paste your worker URL here after deploying worker.js
-  // looks like: https://blipbox.YOUR-NAME.workers.dev
-  workerUrl: 'https://YOUR-WORKER.workers.dev',
+  // -- function URL -----------------------------------------
+  // after deploying to netlify this is always just '/blip'
+  // (netlify routes it automatically — don't change this)
+  functionUrl: '/blip',
 
-  // -- github (used ONLY by the inbox page to READ issues) --
-  // this token only needs Issues → Read access (not write)
-  // write access lives safely in the worker's secret variables
+  // -- github (READ ONLY — for the inbox page) --------------
+  // go to github → settings → developer settings →
+  // fine-grained tokens → new token
+  // permissions: Issues → Read only
+  // this is safe to have here since it can only read, not write
   github: {
-    owner: 'YOUR_GITHUB_USERNAME',
+    owner: 'YOUR_GITHUB_USERNAME',   // e.g. 'Ryth1m'
     repo:  'blipbox',
-    token: 'YOUR_READ_ONLY_PAT',   // Issues: Read only — safe to expose
+    token: 'YOUR_READ_ONLY_PAT',
   },
 
   // -- inbox secret slug ------------------------------------
-  // rename inbox-YOURSLUG.html to match this
-  // e.g. 'mango-fox-99'  →  inbox-mango-fox-99.html
+  // your inbox lives at: yoursite.netlify.app/inbox-SLUG.html
+  // rename inbox-YOURSLUG.html to match — this is your "password"
   inboxSlug: 'change-this-to-something-secret',
 
   // -- your links -------------------------------------------

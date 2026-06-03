@@ -1,7 +1,6 @@
 // ============================================================
 //  js/submit.js
-//  ► SUBMIT ENGINE — sends the message + drawing to your
-//    Cloudflare Worker, which handles GitHub + imgbb securely.
+//  ► SUBMIT ENGINE — sends the blip to the netlify function.
 //    no tokens in the browser. config from config/socials.js.
 // ============================================================
 
@@ -23,14 +22,13 @@ window.submitBlip = async function () {
   const payload = { message: msg };
 
   if (hasDrawn) {
-    // strip the data:image/png;base64, prefix — worker gets raw base64
-    const dataUrl = getCanvasDataURL();
-    payload.drawingBase64 = dataUrl.split(',')[1];
+    // strip data:image/png;base64, prefix — function gets raw base64
+    payload.drawingBase64 = getCanvasDataURL().split(',')[1];
   }
 
-  // -- send to cloudflare worker ----------------------------
+  // -- post to netlify function at /blip --------------------
   try {
-    const res = await fetch(BLIPBOX_CONFIG.workerUrl, {
+    const res  = await fetch(BLIPBOX_CONFIG.functionUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -53,7 +51,6 @@ window.submitBlip = async function () {
   btn.disabled = false;
 };
 
-// -- status helper --------------------------------------------
 function showStatus(type, html) {
   const el     = document.getElementById('status');
   el.className = `status ${type}`;

@@ -1,0 +1,12 @@
+# ============================================================
+#  netlify.toml — tells netlify how to serve the project
+#  YOU DON'T NEED TO EDIT THIS FILE.
+# ============================================================
+
+[build]
+  publish = "."                     # serve files from root
+  functions = "netlify/functions"   # functions folder
+
+[[edge_functions]]
+  path = "/blip"
+  function = "blip"
