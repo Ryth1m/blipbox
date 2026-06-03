@@ -408,6 +408,10 @@ wrap.addEventListener('wheel',e=>{
   if(e.ctrlKey||e.metaKey){ e.preventDefault(); adjustZoom(e.deltaY<0?0.1:-0.1); }
 },{passive:false});
 
+// ── HISTORY (declared early so initStudio can call saveHistory) ──
+const MAX_HIST = 40;
+let drawHistory=[], drawHistIdx=-1;
+
 // ── INIT ──────────────────────────────────────────────────────
 function initStudio() {
   drawCanvas.width=canvasW; drawCanvas.height=canvasH;
@@ -463,18 +467,15 @@ function setActiveSwatch(el) {
   el.classList.add('active');
 }
 
-// ── HISTORY ───────────────────────────────────────────────────
-const MAX_HIST = 40;
-let history=[], histIdx=-1;
-
+// ── HISTORY FUNCTIONS ─────────────────────────────────────────
 function saveHistory() {
-  history = history.slice(0,histIdx+1);
-  history.push(layers.map(l=>({
+  drawHistory = drawHistory.slice(0,drawHistIdx+1);
+  drawHistory.push(layers.map(l=>({
     id:l.id, name:l.name, visible:l.visible, opacity:l.opacity,
     data:l.ctx.getImageData(0,0,l.canvas.width,l.canvas.height)
   })));
-  if(history.length>MAX_HIST) history.shift();
-  histIdx=history.length-1;
+  if(drawHistory.length>MAX_HIST) drawHistory.shift();
+  drawHistIdx=drawHistory.length-1;
   updateUndoRedo();
 }
 
@@ -489,11 +490,11 @@ function restoreHistory(snap) {
   renderAllLayers(); renderLayerList();
 }
 
-function undo() { if(histIdx>0){histIdx--;restoreHistory(history[histIdx]);} updateUndoRedo(); }
-function redo() { if(histIdx<history.length-1){histIdx++;restoreHistory(history[histIdx]);} updateUndoRedo(); }
+function undo() { if(drawHistIdx>0){drawHistIdx--;restoreHistory(drawHistory[drawHistIdx]);} updateUndoRedo(); }
+function redo() { if(drawHistIdx<drawHistory.length-1){drawHistIdx++;restoreHistory(drawHistory[drawHistIdx]);} updateUndoRedo(); }
 function updateUndoRedo() {
-  document.getElementById('undoBtn').disabled=histIdx<=0;
-  document.getElementById('redoBtn').disabled=histIdx>=history.length-1;
+  document.getElementById('undoBtn').disabled=drawHistIdx<=0;
+  document.getElementById('redoBtn').disabled=drawHistIdx>=drawHistory.length-1;
 }
 
 // ── TOOLS ─────────────────────────────────────────────────────
