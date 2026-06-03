@@ -63,13 +63,7 @@ input[type="color"] { width:32px; height:32px; border:2px solid var(--border); b
 .swatch.active { border-color:var(--ink); box-shadow:0 0 0 2px var(--ink); }
 .opt-label { font-family:var(--font-mono); font-size:10px; color:var(--muted); white-space:nowrap; flex-shrink:0; }
 
-/* canvas size btns */
-.size-btn { background:var(--bg); border:2px solid var(--border); border-radius:8px; color:var(--muted); font-family:var(--font-mono); font-size:10px; font-weight:700; padding:4px 10px; cursor:pointer; transition:all 0.12s; flex-shrink:0; }
-.size-btn:hover  { border-color:var(--accent2); color:var(--ink); }
-.size-btn.active { background:var(--accent2); border-color:var(--accent2); color:var(--ink); }
 
-/* zoom controls */
-.zoom-label { font-family:var(--font-mono); font-size:10px; color:var(--muted); min-width:36px; text-align:center; flex-shrink:0; }
 
 /* canvas wrap — clip + scroll when zoomed */
 .studio-canvas-wrap {
@@ -185,19 +179,8 @@ input[type="color"] { width:32px; height:32px; border:2px solid var(--border); b
         <!-- ROW 3: swatches -->
         <div class="studio-colors" id="swatchRow"></div>
 
-        <!-- ROW 4: canvas size + zoom + layers toggle -->
+        <!-- ROW 4: layers toggle -->
         <div class="studio-options" style="border-top:none">
-          <span class="opt-label">canvas</span>
-          <button class="size-btn" onclick="setCanvasSize('S')">S</button>
-          <button class="size-btn active" id="csM" onclick="setCanvasSize('M')">M</button>
-          <button class="size-btn" onclick="setCanvasSize('L')">L</button>
-          <div class="tb-sep"></div>
-          <span class="opt-label">zoom</span>
-          <button class="act-btn" onclick="adjustZoom(-0.25)">−</button>
-          <span class="zoom-label" id="zoomLabel">100%</span>
-          <button class="act-btn" onclick="adjustZoom(0.25)">+</button>
-          <button class="act-btn" onclick="resetZoom()">fit</button>
-          <div class="tb-sep"></div>
           <button class="act-btn" onclick="toggleLayers()" id="layersToggle">🗂 layers</button>
         </div>
 
@@ -222,7 +205,7 @@ input[type="color"] { width:32px; height:32px; border:2px solid var(--border); b
         </div>
 
       </div>
-      <p class="canvas-hint">// scroll toolbar · Ctrl+Z undo · pinch or scroll to zoom · tap layer name to rename</p>
+      <p class="canvas-hint">// scroll toolbar for more tools · Ctrl+Z undo · tap layer name to rename</p>
     </div>
 
     <div class="submit-row">
@@ -250,10 +233,8 @@ const prevCtx     = prevCanvas.getContext('2d');
 const brushPrev   = document.getElementById('brushPreview');
 const textOverlay = document.getElementById('textOverlay');
 
-// canvas logical sizes
-const SIZES = { S:[320,240], M:[480,320], L:[640,420] };
-let canvasW = 480, canvasH = 320;
-let zoom = 1;
+// canvas fixed size
+const canvasW = 480, canvasH = 320;
 
 // ── LAYERS ────────────────────────────────────────────────────
 let layers = [];       // [{id, name, canvas, ctx, visible, opacity}]
@@ -363,50 +344,9 @@ function toggleLayers() {
   document.getElementById('layersToggle').classList.toggle('active', p.classList.contains('open'));
 }
 
-// ── CANVAS SIZE ───────────────────────────────────────────────
-function setCanvasSize(s) {
-  [canvasW, canvasH] = SIZES[s];
-  layers.forEach(l => {
-    const old = l.ctx.getImageData(0,0,l.canvas.width,l.canvas.height);
-    l.canvas.width=canvasW; l.canvas.height=canvasH;
-    l.ctx.putImageData(old,0,0);
-  });
-  drawCanvas.width=canvasW; drawCanvas.height=canvasH;
-  prevCanvas.width=canvasW; prevCanvas.height=canvasH;
-  renderAllLayers();
-  document.querySelectorAll('.size-btn').forEach(b=>b.classList.remove('active'));
-  document.querySelector(`.size-btn[onclick="setCanvasSize('${s}')"]`).classList.add('active');
-  applyZoom();
-}
 
-// ── ZOOM ──────────────────────────────────────────────────────
-function applyZoom() {
-  drawCanvas.style.width  = canvasW*zoom+'px';
-  drawCanvas.style.height = canvasH*zoom+'px';
-  prevCanvas.style.width  = canvasW*zoom+'px';
-  prevCanvas.style.height = canvasH*zoom+'px';
-  prevCanvas.style.top    = drawCanvas.offsetTop+'px';
-  prevCanvas.style.left   = drawCanvas.offsetLeft+'px';
-  document.getElementById('zoomLabel').textContent = Math.round(zoom*100)+'%';
-}
-function adjustZoom(d) { zoom=Math.min(4,Math.max(0.25,zoom+d)); applyZoom(); }
-function resetZoom()   { zoom=1; applyZoom(); }
 
-// pinch-to-zoom
-let pinchDist0=0;
-wrap.addEventListener('touchstart',e=>{
-  if(e.touches.length===2){ pinchDist0=Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY); }
-},{passive:true});
-wrap.addEventListener('touchmove',e=>{
-  if(e.touches.length===2){
-    const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY);
-    zoom=Math.min(4,Math.max(0.25,zoom*(d/pinchDist0)));
-    pinchDist0=d; applyZoom();
-  }
-},{passive:true});
-wrap.addEventListener('wheel',e=>{
-  if(e.ctrlKey||e.metaKey){ e.preventDefault(); adjustZoom(e.deltaY<0?0.1:-0.1); }
-},{passive:false});
+
 
 // ── ALL VARS DECLARED BEFORE initStudio() ────────────────────
 const MAX_HIST = 40;
@@ -414,7 +354,7 @@ let drawHistory=[], drawHistIdx=-1;
 const PALETTE = ['#2d2013','#ff6b35','#ffb830','#4ecdc4','#ff6b6b','#a8e6cf',
   '#ffd93d','#6bcb77','#4d96ff','#c77dff','#ffffff','#f8f0e3'];
 let recentColors = [];
-let currentTool='pen', isDrawing=false, lastX=0, lastY=0;
+let currentTool='pen', isDrawing=false, lastX=0, lastY=0, zoom=1;
 let shapeStart=null;
 
 // ── INIT ──────────────────────────────────────────────────────
@@ -424,7 +364,6 @@ function initStudio() {
   initLayers();
   saveHistory();
   buildSwatches();
-  applyZoom();
 }
 initStudio();
 
@@ -554,8 +493,8 @@ function onMove(e) {
   const s=e.touches?e.touches[0]:e;
   const size=+document.getElementById('brushSize').value;
   brushPrev.style.display='block';
-  brushPrev.style.width=size*zoom+'px';
-  brushPrev.style.height=size*zoom+'px';
+  brushPrev.style.width=size+'px';
+  brushPrev.style.height=size+'px';
   brushPrev.style.left=(s.clientX-r.left)+'px';
   brushPrev.style.top=(s.clientY-r.top)+'px';
   brushPrev.style.background=currentTool==='eraser'?'#f0e0cc':document.getElementById('colorPicker').value;
@@ -690,8 +629,9 @@ let textX=0, textY=0;
 function placeText(x,y) {
   textX=x; textY=y;
   const r=drawCanvas.getBoundingClientRect();
-  const sx=x*zoom+scroller.getBoundingClientRect().left-wrap.getBoundingClientRect().left;
-  const sy=y*zoom+scroller.getBoundingClientRect().top-wrap.getBoundingClientRect().top;
+  const r2=drawCanvas.getBoundingClientRect();
+  const sx=x*(r2.width/canvasW)+r2.left-wrap.getBoundingClientRect().left;
+  const sy=y*(r2.height/canvasH)+r2.top-wrap.getBoundingClientRect().top;
   const size=+document.getElementById('brushSize').value;
   textOverlay.style.display='block';
   textOverlay.style.left=sx+'px';
