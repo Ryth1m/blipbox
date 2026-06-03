@@ -1,24 +1,42 @@
-============================================================
-  EMAILJS TEMPLATE — copy this when creating your template
-  on emailjs.com → Email Templates → Create New Template
-============================================================
+<div style="font-family: 'Nunito', system-ui, sans-serif; background-color: #fff9f0; background-image: radial-gradient(#f0e0cc 1.5px, transparent 1.5px); background-size: 24px 24px; padding: 48px 16px;">
+  <div style="max-width: 540px; margin: 0 auto;">
 
-Subject:
-  📬 new blip!
+    <!-- badge -->
+    <div style="margin-bottom: 20px;">
+      <span style="display: inline-block; background: #ff6b35; color: #fff; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; padding: 6px 16px; border-radius: 99px; box-shadow: 3px 3px 0 #2d2013;">
+        ● blipbox
+      </span>
+    </div>
 
-Body:
-  someone sent you a blip!
+    <!-- headline -->
+    <h1 style="font-size: 36px; font-weight: 900; color: #2d2013; margin: 0 0 32px; line-height: 1.1; letter-spacing: -1px;">
+      someone<br/>
+      <span style="display: inline-block; background: #ffb830; color: #2d2013; padding: 2px 12px; border-radius: 8px; transform: rotate(-1deg); box-shadow: 3px 3px 0 #ff6b35;">dropped</span>
+      you a blip!
+    </h1>
 
-  Message:
-  {{message}}
+    <!-- message card -->
+    <div style="background: #ffffff; border: 2px solid #f0e0cc; border-radius: 20px; box-shadow: 5px 5px 0 #f0e0cc; margin-bottom: 16px; overflow: hidden;">
+      <div style="padding: 10px 20px; border-bottom: 2px solid #f0e0cc; background: #fff3e0;">
+        <span style="font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #a08060;">✉ message</span>
+      </div>
+      <div style="padding: 20px; font-size: 15px; color: #2d2013; line-height: 1.7; white-space: pre-wrap; word-break: break-word;">{{message}}</div>
+    </div>
 
-  Drawing:
-  {{drawing}}
+    <!-- drawing card -->
+    <div style="background: #ffffff; border: 2px solid #f0e0cc; border-radius: 20px; box-shadow: 5px 5px 0 #f0e0cc; margin-bottom: 16px; overflow: hidden;">
+      <div style="padding: 10px 20px; border-bottom: 2px solid #f0e0cc; background: #fff3e0;">
+        <span style="font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #a08060;">🎨 drawing</span>
+      </div>
+      <div style="padding: 20px;">
+        <img src="{{drawing}}" alt="drawing" style="width: 100%; border-radius: 10px; border: 2px solid #f0e0cc; display: block;" />
+      </div>
+    </div>
 
-  Sent at:
-  {{sent_at}}
+    <!-- footer -->
+    <div style="text-align: center; font-size: 11px; color: #a08060; letter-spacing: 0.08em; margin-top: 24px;">
+      blipbox · {{sent_at}}<br/>only you can see this ✌
+    </div>
 
-============================================================
-  IMPORTANT: the variable names must match exactly:
-    {{message}}   {{drawing}}   {{sent_at}}
-============================================================
+  </div>
+</div>
