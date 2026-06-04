@@ -87,25 +87,28 @@ input[type="color"] { width:28px; height:28px; border:2px solid var(--border); b
 .swatch.active { border-color:var(--ink); box-shadow:0 0 0 2px var(--ink); }
 .opt-label { font-family:var(--font-mono); font-size:10px; color:var(--muted); white-space:nowrap; flex-shrink:0; }
 
-/* CANVAS VIEWPORT (Supports Zoom & Scroll) */
+/* CANVAS VIEWPORT (Supports True Zoom & Scroll) */
 .studio-canvas-wrap {
   position: relative; background: #c8c8c8; overflow: auto;
   width: 100%; height: 320px; touch-action: pan-x pan-y;
   border-bottom: 2px solid var(--border);
 }
-/* This scroller resizes based on zoom, triggering scrollbars in wrap */
+
 .canvas-scroller {
-  position: relative; width: 100%; height: 100%; min-width: 100%; min-height: 100%;
+  position: relative; min-width: 100%; min-height: 100%;
+  width: fit-content; height: fit-content;
   display: flex; align-items: center; justify-content: center;
-  transform-origin: 0 0;
+  padding: 16px; box-sizing: border-box; margin: 0 auto;
 }
-/* Absolute centering inside the scroller */
+
 .canvas-inner {
-  position: relative; 
-  width: 100%; height: 100%; 
-  max-width: 480px; max-height: 320px; 
-  transition: width 0.1s, height 0.1s;
+  position: relative; flex-shrink: 0;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  background: var(--bg);
+  /* The exact width and height will be driven by JS based on Zoom Level */
+  transition: width 0.15s ease-out, height 0.15s ease-out;
 }
+
 #drawCanvas, .preview-canvas {
   position: absolute; top: 0; left: 0;
   width: 100%; height: 100%;
@@ -144,14 +147,6 @@ input[type="color"] { width:28px; height:28px; border:2px solid var(--border); b
 .layer-del { font-size:12px; color:var(--muted); }
 .layer-del:hover { color:#ff4444; }
 .layer-opacity { width:60px; flex-shrink:0; }
-
-/* spam protection */
-.captcha-box {
-  background: var(--bg2); border: 1px dashed var(--border); padding: 10px;
-  border-radius: 8px; display: flex; align-items: center; gap: 8px; margin-top: 16px;
-  font-family: var(--font-mono); font-size: 12px;
-}
-.captcha-box input { width: 40px; padding: 4px; text-align: center; font-family: inherit; }
 
 /* modals & overlays */
 .preview-modal, #confettiCanvas { display:none; position:fixed; inset:0; z-index:1000; }
@@ -278,15 +273,7 @@ input[type="color"] { width:28px; height:28px; border:2px solid var(--border); b
           <div id="layerList"></div>
         </div>
       </div>
-      <p class="canvas-hint">// Ctrl+Z undo · drag ☰ to reorder · tools are accurate to cursor on all screens!</p>
-    </div>
-
-    <!-- SPAM PROTECTION -->
-    <div class="captcha-box">
-      <span style="color:var(--muted)">🛡️ spam protection:</span>
-      <span id="captchaQ"></span> = 
-      <input type="number" id="captchaA" placeholder="?"/>
-      <input type="text" id="hp_field" style="display:none" tabindex="-1" autocomplete="off"/>
+      <p class="canvas-hint">// Ctrl+Z undo · drag ☰ to reorder · tools are pixel-perfect accurate to your cursor!</p>
     </div>
 
     <div class="submit-row" style="margin-top:16px">
@@ -352,16 +339,30 @@ const bgColorPicker = document.getElementById('bgColorPicker');
 const canvasW = 480, canvasH = 320;
 let zoomLevel = 1;
 
+// Dynamically scale inner dimensions to force proper scrolling within the wrapper
+function updateZoomLayout() {
+  const wrapW = wrap.clientWidth; 
+  if (!wrapW) return;
+  // Account for the 16px padding on both sides in the scroller
+  const safeW = wrapW - 32; 
+  // Base width corresponds to 100% Zoom (capped at 480 logical pixels)
+  const baseW = Math.min(480, safeW); 
+  const baseH = baseW * (320 / 480);
+  
+  inner.style.width = (baseW * zoomLevel) + 'px';
+  inner.style.height = (baseH * zoomLevel) + 'px';
+}
+
 function setZoom(dz) {
   if (dz === 0) zoomLevel = 1;
   else zoomLevel = Math.max(0.5, Math.min(3, zoomLevel + dz));
   
   document.getElementById('zoomVal').textContent = Math.round(zoomLevel * 100) + '%';
-  inner.style.width = (100 * zoomLevel) + '%';
-  inner.style.height = (100 * zoomLevel) + '%';
-  inner.style.maxWidth = (480 * zoomLevel) + 'px';
-  inner.style.maxHeight = (320 * zoomLevel) + 'px';
+  updateZoomLayout();
 }
+
+// Keep it accurate if window resizes (like rotating a phone)
+window.addEventListener('resize', updateZoomLayout);
 
 // ── LAYERS ────────────────────────────────────────────────────
 let layers = []; 
@@ -387,6 +388,8 @@ function getActiveCtx() { return layers[activeLayerIdx].ctx; }
 function renderAllLayers() {
   const dc = drawCanvas.getContext('2d');
   dc.clearRect(0,0,canvasW,canvasH);
+  
+  // Custom Background
   dc.fillStyle = bgColorPicker.value;
   dc.fillRect(0,0,canvasW,canvasH);
   
@@ -571,8 +574,11 @@ function initStudio() {
   drawCanvas.width=canvasW; drawCanvas.height=canvasH;
   prevCanvas.width=canvasW; prevCanvas.height=canvasH;
   buildSwatches();
+  
   if (!loadLocal()) { initLayers(); saveHistory(); }
-  generateCaptcha();
+  
+  // Set accurate initial scale geometry dynamically
+  setTimeout(updateZoomLayout, 0); 
 }
 
 function buildSwatches() {
@@ -643,11 +649,12 @@ function setTool(t) {
   drawCanvas.style.cursor=cursors[t]||'crosshair';
 }
 
-// ── POINTER HELPERS ───────────────────────────────────────────
+// ── ACCURATE POINTER MATH ──────────────────────────────────────
 function getPos(e) {
   const r = drawCanvas.getBoundingClientRect();
   const s = e.touches ? e.touches[0] : e;
-  // Because canvas scales via width/height CSS, this math makes it 100% accurate always
+  // Because 'inner' scales physically and r.width updates,
+  // this math always yields the EXACT pixel on the logical 480x320 canvas.
   return [
     (s.clientX - r.left) * (canvasW / r.width),
     (s.clientY - r.top) * (canvasH / r.height),
@@ -705,7 +712,7 @@ function onMove(e) {
   e.preventDefault();
   const [x,y]=getPos(e);
 
-  // update brush preview
+  // update brush preview position (mapped visually)
   const size = +document.getElementById('brushSize').value;
   const s = e.touches ? e.touches[0] : e;
   const r = inner.getBoundingClientRect();
@@ -773,9 +780,9 @@ function onEnd(e) {
 }
 drawCanvas.addEventListener('mouseleave',()=>{ brushPrev.style.display='none'; });
 
+// Show preview in middle of canvas when resizing brush
 document.getElementById('brushSize').addEventListener('input', function(e) {
   document.getElementById('sizeVal').textContent = this.value;
-  // show preview in middle temporarily
   const size = +this.value;
   brushPrev.style.width = (size * zoomLevel) + 'px';
   brushPrev.style.height = (size * zoomLevel) + 'px';
@@ -834,12 +841,11 @@ function commitShape(x0,y0,x1,y1) {
 let textX=0, textY=0;
 function placeText(x,y) {
   textX=x; textY=y;
-  const r = inner.getBoundingClientRect();
-  const sx = x * (r.width / canvasW);
-  const sy = y * (r.height / canvasH);
   const size = +document.getElementById('brushSize').value;
-  textOverlay.style.display='block'; textOverlay.style.left=sx+'px'; textOverlay.style.top=sy+'px';
-  textOverlay.style.fontSize=Math.max(12,size*2*zoomLevel)+'px';
+  textOverlay.style.display='block'; 
+  textOverlay.style.left = (x / canvasW * 100) + '%';
+  textOverlay.style.top = (y / canvasH * 100) + '%';
+  textOverlay.style.fontSize=Math.max(12, size * 2 * zoomLevel) + 'px';
   textOverlay.style.color=document.getElementById('colorPicker').value;
   textOverlay.value=''; textOverlay.focus();
 }
@@ -920,22 +926,10 @@ function saveDrawingImage() {
   const link = document.createElement('a'); link.download = 'blipbox-drawing.png'; link.href = flat.toDataURL('image/png'); link.click();
 }
 
-// CAPTCHA Logic
-let captchaAns = 0;
-function generateCaptcha() {
-  const a = Math.floor(Math.random() * 9) + 1;
-  const b = Math.floor(Math.random() * 9) + 1;
-  captchaAns = a + b;
-  document.getElementById('captchaQ').textContent = `${a} + ${b}`;
-}
 
 function submitBlip() {
   const msg = msgEl.value.trim();
   if (!msg) { showStatus('error', '✗ write something first!'); return; }
-  if (document.getElementById('hp_field').value !== '') { return; } // honeypot triggered silently
-  if (parseInt(document.getElementById('captchaA').value) !== captchaAns) {
-    showStatus('error', '✗ incorrect math answer (spam check).'); return; 
-  }
   
   if (selState) commitSelection();
 
@@ -976,7 +970,7 @@ async function doSend() {
     await emailjs.send( BLIPBOX_CONFIG.emailjs.serviceId, BLIPBOX_CONFIG.emailjs.templateId, { message: msg, drawing: drawingUrl, sent_at: new Date().toUTCString() } );
     card.innerHTML = cardContent;
     showStatus('success', "📬 blip sent! i'll see it.");
-    msgEl.value = ''; document.getElementById('captchaA').value = ''; generateCaptcha();
+    msgEl.value = '';
     countEl.textContent = '0 / 500';
     layers.forEach(l => l.ctx.clearRect(0,0,l.canvas.width,l.canvas.height));
     bgColorPicker.value = '#fffdf8';
@@ -984,7 +978,6 @@ async function doSend() {
     fireConfetti();
   } catch(e) {
     card.innerHTML = cardContent;
-    document.getElementById('captchaA').value = ''; generateCaptcha();
     showStatus('error', `✗ failed: ${e.text||e.message||'unknown error'}`);
   }
   btn.disabled = false;
