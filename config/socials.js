@@ -36,7 +36,7 @@ const BLIPBOX_CONFIG = {
   text: {
     headline_line1: 'hey! drop',
     headline_line2: 'me a blip.',
-    subtitle: `i'm a creator & dev. i build stuff in Roblox, make games,\nwrite stories, and post random things. this page is yours —\nask anything, say hi, or just draw something. 🎨`,
+    subtitle: `i'm Gaylover16. i build stuff in Roblox, make games,\nwrite stories, and post random things. this page is yours —\nask anything, say hi, or just draw something. 🎨`,
     placeholder: `ask me about anything really...`,
     kofi_label:  '☕ support me on ko-fi',
   },
