@@ -67,20 +67,22 @@ input[type="color"] { width:32px; height:32px; border:2px solid var(--border); b
 .swatch.active { border-color:var(--ink); box-shadow:0 0 0 2px var(--ink); }
 .opt-label { font-family:var(--font-mono); font-size:10px; color:var(--muted); white-space:nowrap; flex-shrink:0; }
 
-
-/* canvas wrap — clip + scroll when zoomed */
+/* canvas wrap — scales perfectly on PC and Mobile maintaining a 3:2 aspect ratio */
 .studio-canvas-wrap {
   position:relative; background:#c8c8c8; overflow:hidden;
-  height:280px; cursor:crosshair; touch-action:none;
+  width: 100%; aspect-ratio: 480 / 320;
+  cursor:crosshair; touch-action:none;
 }
 .canvas-scroller {
   position:absolute; inset:0; overflow:hidden;
   display:flex; align-items:center; justify-content:center;
 }
-#drawCanvas { display:block; image-rendering:pixelated; touch-action:none; }
-.preview-canvas { position:absolute; top:0; left:0; pointer-events:none; image-rendering:pixelated; }
+#drawCanvas, .preview-canvas {
+  width: 100%; height: 100%; object-fit: contain; 
+  display:block; image-rendering:pixelated; touch-action:none;
+}
+.preview-canvas { position:absolute; top:0; left:0; pointer-events:none; }
 .brush-preview { position:absolute; pointer-events:none; border-radius:50%; opacity:0.5; display:none; transform:translate(-50%,-50%); }
-@media(max-width:480px){ .studio-canvas-wrap { height:220px; } }
 
 /* text input overlay */
 .text-input-overlay {
@@ -91,17 +93,25 @@ input[type="color"] { width:32px; height:32px; border:2px solid var(--border); b
 
 /* layers panel */
 .layers-panel {
-  border-top:2px solid var(--border); background:var(--bg2); max-height:180px;
+  border-top:2px solid var(--border); background:var(--bg2); max-height:220px;
   overflow-y:auto; display:none; flex-direction:column;
 }
 .layers-panel.open { display:flex; }
 .layer-row {
   display:flex; align-items:center; gap:8px; padding:6px 10px;
   border-bottom:1px solid var(--border); cursor:pointer; transition:background 0.1s;
-  min-height:40px;
+  min-height:40px; background: transparent;
 }
 .layer-row:hover    { background:var(--border); }
 .layer-row.active   { background:rgba(255,107,53,0.12); border-left:3px solid var(--accent); }
+
+/* drag handle */
+.drag-handle {
+  cursor: grab; color: var(--muted); padding: 0 4px; font-size: 16px;
+  user-select: none; touch-action: none;
+}
+.drag-handle:active { cursor: grabbing; color: var(--ink); }
+
 .layer-thumb {
   width:36px; height:28px; border:1px solid var(--border); border-radius:4px;
   background:#fffdf8; flex-shrink:0; image-rendering:pixelated;
@@ -265,13 +275,13 @@ input[type="color"] { width:32px; height:32px; border:2px solid var(--border); b
           <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:2px solid var(--border);background:var(--bg2);flex-wrap:wrap;">
             <span class="opt-label" style="flex:1; min-width:120px;">🗂 layers (top = front)</span>
             <button class="act-btn" onclick="addLayer()">+ add</button>
-            <button class="act-btn" onclick="mergeAllLayers()">⇩ merge all</button>
+            <button class="act-btn" onclick="mergeDown()" title="Merge active layer with the one beneath it">⇩ merge down</button>
           </div>
           <div id="layerList"></div>
         </div>
 
       </div>
-      <p class="canvas-hint">// Ctrl+Z undo · tap layer name to rename</p>
+      <p class="canvas-hint">// Ctrl+Z undo · drag ☰ to reorder layers · tap layer name to rename</p>
     </div>
 
     <!-- char counter wrapper -->
@@ -330,7 +340,7 @@ const prevCtx     = prevCanvas.getContext('2d');
 const brushPrev   = document.getElementById('brushPreview');
 const textOverlay = document.getElementById('textOverlay');
 
-// canvas fixed size
+// canvas fixed size (internal drawing resolution, scales visually via CSS)
 const canvasW = 480, canvasH = 320;
 
 // ── LAYERS ────────────────────────────────────────────────────
@@ -338,6 +348,7 @@ let layers = [];       // [{id, name, canvas, ctx, visible, opacity}]
 let activeLayerIdx = 0;
 let layerCounter   = 1;
 let hasDrawn       = false;
+let draggingIdx    = -1; // track drag state
 
 function makeLayer(name) {
   const c   = document.createElement('canvas');
@@ -362,6 +373,7 @@ function renderAllLayers() {
   dc.clearRect(0,0,canvasW,canvasH);
   dc.fillStyle = '#fffdf8';
   dc.fillRect(0,0,canvasW,canvasH);
+  // draw backwards so index 0 is top
   for (let i = layers.length-1; i >= 0; i--) {
     const l = layers[i];
     if (!l.visible) continue;
@@ -377,19 +389,98 @@ function renderLayerList() {
   list.innerHTML = '';
   layers.forEach((l, i) => {
     const row = document.createElement('div');
-    row.className = 'layer-row' + (i===activeLayerIdx ? ' active' : '');
+    row.className = 'layer-row' + (i === activeLayerIdx ? ' active' : '');
+    row.dataset.index = i;
+    row.draggable = true;
+    
     row.innerHTML = `
+      <div class="drag-handle" title="drag to reorder">☰</div>
       <canvas class="layer-thumb" id="lthumb${l.id}"></canvas>
-      <input class="layer-name" value="${l.name}" onchange="renameLayer(${i}, this.value)" onclick="selectLayer(${i})"/>
-      <input type="range" class="layer-opacity" min="0" max="1" step="0.05" value="${l.opacity}" title="opacity"
-        oninput="setLayerOpacity(${i}, this.value)"/>
+      <input class="layer-name" value="${l.name}" onchange="renameLayer(${i}, this.value)" onfocus="selectLayer(${i})"/>
+      <input type="range" class="layer-opacity" min="0" max="1" step="0.05" value="${l.opacity}" title="opacity" oninput="setLayerOpacity(${i}, this.value)"/>
       <button class="layer-vis" onclick="toggleLayerVis(${i})" title="show/hide">${l.visible?'👁':'🙈'}</button>
       <button class="layer-del" onclick="deleteLayer(${i})" title="delete">✕</button>
     `;
+    
     row.addEventListener('click', e => {
-      if (e.target.tagName==='INPUT'||e.target.tagName==='BUTTON') return;
+      if (['INPUT','BUTTON','DIV'].includes(e.target.tagName)) return;
       selectLayer(i);
     });
+
+    // Desktop HTML5 Drag & Drop Support
+    row.addEventListener('dragstart', (e) => {
+      draggingIdx = i;
+      e.dataTransfer.effectAllowed = 'move';
+      setTimeout(() => row.style.opacity = '0.4', 0);
+    });
+    row.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      document.querySelectorAll('.layer-row').forEach(r => { r.style.borderTop=''; r.style.borderBottom=''; });
+      if (i < draggingIdx) row.style.borderTop = '2px solid var(--accent)';
+      else if (i > draggingIdx) row.style.borderBottom = '2px solid var(--accent)';
+    });
+    row.addEventListener('dragleave', (e) => {
+      row.style.borderTop=''; row.style.borderBottom='';
+    });
+    row.addEventListener('drop', (e) => {
+      e.preventDefault();
+      row.style.borderTop=''; row.style.borderBottom='';
+      if(draggingIdx !== -1 && draggingIdx !== i) {
+        const moved = layers.splice(draggingIdx, 1)[0];
+        layers.splice(i, 0, moved);
+        activeLayerIdx = i;
+        renderAllLayers(); renderLayerList(); saveHistory();
+      }
+      draggingIdx = -1;
+    });
+    row.addEventListener('dragend', () => {
+      row.style.opacity = '1';
+      document.querySelectorAll('.layer-row').forEach(r => { r.style.borderTop=''; r.style.borderBottom=''; });
+      draggingIdx = -1;
+      renderLayerList();
+    });
+
+    // Mobile Touch Drag Support
+    row.addEventListener('touchstart', (e) => {
+      if (!e.target.classList.contains('drag-handle')) return;
+      draggingIdx = i;
+      setTimeout(() => row.style.opacity = '0.4', 0);
+    }, {passive: false});
+    
+    row.addEventListener('touchmove', (e) => {
+      if(draggingIdx === -1) return;
+      e.preventDefault(); // prevent scroll
+      const touch = e.touches[0];
+      const el = document.elementFromPoint(touch.clientX, touch.clientY);
+      const targetRow = el ? el.closest('.layer-row') : null;
+      
+      document.querySelectorAll('.layer-row').forEach(r => { r.style.borderTop=''; r.style.borderBottom=''; });
+      if(targetRow && targetRow.dataset.index !== undefined) {
+         const tgtIdx = +targetRow.dataset.index;
+         if (tgtIdx < draggingIdx) targetRow.style.borderTop = '2px solid var(--accent)';
+         else if (tgtIdx > draggingIdx) targetRow.style.borderBottom = '2px solid var(--accent)';
+      }
+    }, {passive: false});
+
+    row.addEventListener('touchend', (e) => {
+      if(draggingIdx === -1) return;
+      const touch = e.changedTouches[0];
+      const el = document.elementFromPoint(touch.clientX, touch.clientY);
+      const targetRow = el ? el.closest('.layer-row') : null;
+      
+      if(targetRow && targetRow.dataset.index !== undefined) {
+         const tgtIdx = +targetRow.dataset.index;
+         if(draggingIdx !== tgtIdx) {
+            const moved = layers.splice(draggingIdx, 1)[0];
+            layers.splice(tgtIdx, 0, moved);
+            activeLayerIdx = tgtIdx;
+            renderAllLayers(); saveHistory();
+         }
+      }
+      draggingIdx = -1;
+      renderLayerList(); // resets visuals
+    });
+
     list.appendChild(row);
   });
   updateLayerThumbs();
@@ -421,18 +512,34 @@ function deleteLayer(i) {
   activeLayerIdx = Math.min(activeLayerIdx, layers.length-1);
   renderAllLayers(); renderLayerList();
 }
-function mergeAllLayers() {
-  const merged = makeLayer('merged');
-  const dc = merged.ctx;
-  dc.fillStyle='#fffdf8'; dc.fillRect(0,0,canvasW,canvasH);
-  for (let i=layers.length-1;i>=0;i--) {
-    if (!layers[i].visible) continue;
-    dc.globalAlpha=layers[i].opacity;
-    dc.drawImage(layers[i].canvas,0,0);
+function mergeDown() {
+  if (activeLayerIdx >= layers.length - 1) return; // cannot merge bottom layer down
+  const topIdx = activeLayerIdx;
+  const botIdx = activeLayerIdx + 1;
+  const topL = layers[topIdx];
+  const botL = layers[botIdx];
+
+  const mergedL = makeLayer(botL.name + ' (merged)');
+  const dc = mergedL.ctx;
+  
+  // draw bottom, then top
+  if (botL.visible) {
+    dc.globalAlpha = botL.opacity;
+    dc.drawImage(botL.canvas, 0, 0);
   }
-  dc.globalAlpha=1;
-  layers=[merged]; activeLayerIdx=0;
-  renderAllLayers(); renderLayerList();
+  if (topL.visible) {
+    dc.globalAlpha = topL.opacity;
+    dc.drawImage(topL.canvas, 0, 0);
+  }
+  dc.globalAlpha = 1;
+  
+  // Replace the two layers with the new merged layer
+  layers.splice(topIdx, 2, mergedL);
+  activeLayerIdx = topIdx;
+  
+  renderAllLayers(); 
+  renderLayerList(); 
+  saveHistory();
 }
 
 function toggleLayers() {
