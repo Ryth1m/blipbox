@@ -14,28 +14,32 @@
    ============================================================ */
 .studio { border:2px solid var(--border); border-radius:16px; overflow:hidden; background:var(--surface); margin-top:16px; }
 
-/* toolbar rows */
+/* toolbar rows - Updated to wrap items for full visibility on mobile/PC */
 .studio-toolbar,.studio-options,.studio-colors,.studio-layers-bar {
   display:flex; align-items:center; gap:6px; padding:8px 10px;
   background:var(--bg2); border-bottom:2px solid var(--border);
-  overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; flex-wrap:nowrap;
+  flex-wrap:wrap; 
 }
-.studio-toolbar::-webkit-scrollbar,.studio-options::-webkit-scrollbar,
-.studio-colors::-webkit-scrollbar,.studio-layers-bar::-webkit-scrollbar { display:none; }
 
-/* brush buttons */
+/* brush buttons - Updated to form a neat, responsive grid */
 .brush-btn {
   display:flex; flex-direction:column; align-items:center; gap:2px;
   background:var(--bg); border:2px solid var(--border); border-radius:10px;
   color:var(--muted); font-family:var(--font-mono); font-size:9px;
   padding:5px 9px; cursor:pointer; transition:all 0.12s;
-  white-space:nowrap; flex-shrink:0; box-shadow:2px 2px 0 var(--border); min-width:46px;
+  white-space:nowrap; box-shadow:2px 2px 0 var(--border); min-width:46px;
+  flex: 1 1 calc(20% - 6px); max-width: 70px;
 }
 .brush-btn .bicon { font-size:15px; line-height:1; }
 .brush-btn:hover  { border-color:var(--accent2); color:var(--ink); }
 .brush-btn.active { background:var(--accent); color:#fff; border-color:var(--accent); box-shadow:2px 2px 0 #c03b00; }
 
-.tb-sep { width:1px; height:26px; background:var(--border); flex-shrink:0; margin:0 2px; }
+.tb-sep { width:1px; height:26px; background:var(--border); margin:0 2px; }
+
+/* hide separators on mobile so they don't look weird when wrapped to a new line */
+@media (max-width: 500px) {
+  .tb-sep { display: none; }
+}
 
 /* size slider */
 .size-slider { appearance:none; height:4px; background:var(--border); border-radius:2px; outline:none; cursor:pointer; width:80px; flex-shrink:0; }
@@ -47,7 +51,7 @@ input[type="color"] { width:32px; height:32px; border:2px solid var(--border); b
   background:var(--bg); border:2px solid var(--border); border-radius:8px;
   color:var(--muted); font-family:var(--font-mono); font-size:11px; font-weight:700;
   padding:5px 10px; cursor:pointer; transition:all 0.12s;
-  box-shadow:2px 2px 0 var(--border); flex-shrink:0; white-space:nowrap;
+  box-shadow:2px 2px 0 var(--border); white-space:nowrap;
 }
 .act-btn:hover  { border-color:var(--accent); color:var(--ink); }
 .act-btn:active { transform:translate(1px,1px); box-shadow:none; }
@@ -57,12 +61,11 @@ input[type="color"] { width:32px; height:32px; border:2px solid var(--border); b
 /* color swatches */
 .swatch {
   width:24px; height:24px; border-radius:6px; border:2px solid var(--border);
-  cursor:pointer; flex-shrink:0; transition:all 0.12s; box-shadow:1px 1px 0 var(--border);
+  cursor:pointer; transition:all 0.12s; box-shadow:1px 1px 0 var(--border);
 }
 .swatch:hover  { transform:scale(1.2); border-color:var(--ink); }
 .swatch.active { border-color:var(--ink); box-shadow:0 0 0 2px var(--ink); }
 .opt-label { font-family:var(--font-mono); font-size:10px; color:var(--muted); white-space:nowrap; flex-shrink:0; }
-
 
 
 /* canvas wrap — clip + scroll when zoomed */
@@ -225,12 +228,14 @@ input[type="color"] { width:32px; height:32px; border:2px solid var(--border); b
 
         <!-- ROW 2: size + color + undo/redo/clear -->
         <div class="studio-options">
-          <span class="opt-label">size</span>
-          <input type="range" class="size-slider" id="brushSize" min="1" max="40" value="6"/>
-          <span class="opt-label" id="sizeVal">6</span>
-          <span class="opt-label" style="margin-left:4px">color</span>
-          <input type="color" id="colorPicker" value="#2d2013"/>
-          <div style="display:flex;gap:5px;margin-left:auto;flex-shrink:0">
+          <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+            <span class="opt-label">size</span>
+            <input type="range" class="size-slider" id="brushSize" min="1" max="40" value="6"/>
+            <span class="opt-label" style="width:16px;text-align:center;" id="sizeVal">6</span>
+            <span class="opt-label" style="margin-left:4px">color</span>
+            <input type="color" id="colorPicker" value="#2d2013"/>
+          </div>
+          <div style="display:flex;gap:5px;margin-left:auto;flex-wrap:wrap;">
             <button class="act-btn" id="undoBtn" onclick="undo()" title="Ctrl+Z">↩</button>
             <button class="act-btn" id="redoBtn" onclick="redo()" title="Ctrl+Y">↪</button>
             <button class="act-btn danger" onclick="clearActiveLayer()">× clear</button>
@@ -257,8 +262,8 @@ input[type="color"] { width:32px; height:32px; border:2px solid var(--border); b
 
         <!-- layers panel -->
         <div class="layers-panel" id="layersPanel">
-          <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:2px solid var(--border);background:var(--bg2)">
-            <span class="opt-label" style="flex:1">🗂 layers (top = front)</span>
+          <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:2px solid var(--border);background:var(--bg2);flex-wrap:wrap;">
+            <span class="opt-label" style="flex:1; min-width:120px;">🗂 layers (top = front)</span>
             <button class="act-btn" onclick="addLayer()">+ add</button>
             <button class="act-btn" onclick="mergeAllLayers()">⇩ merge all</button>
           </div>
@@ -266,7 +271,7 @@ input[type="color"] { width:32px; height:32px; border:2px solid var(--border); b
         </div>
 
       </div>
-      <p class="canvas-hint">// scroll toolbar for more tools · Ctrl+Z undo · tap layer name to rename</p>
+      <p class="canvas-hint">// Ctrl+Z undo · tap layer name to rename</p>
     </div>
 
     <!-- char counter wrapper -->
